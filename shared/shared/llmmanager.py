@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import requests
 import asyncio
 import httpx
+import time
 
 # Create a custom message class for Ollama responses
 class OllamaMessage:
@@ -237,7 +238,7 @@ class LLMManager:
                             if attempt == retries - 1:
                                 raise
                             logger.warning(f"Retry {attempt + 1}/{retries} failed: {e}")
-                            await asyncio.sleep(2 ** attempt)
+                            time.sleep(2 ** attempt)
                 else:
                     # Fallback to original LangChain logic for NVIDIA endpoints
                     # (Keep original implementation for backwards compatibility)

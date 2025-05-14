@@ -16,7 +16,7 @@ RUN apt-get update && \
 RUN pip install --upgrade pip
 
 # Install PyTorch with CUDA support
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # Install TorToiSe requirements
 RUN pip install \
