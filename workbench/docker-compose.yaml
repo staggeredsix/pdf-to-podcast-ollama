@@ -1,0 +1,200 @@
+version: "3.8"
+
+services:
+  # Add Ollama service
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - app-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Optional: Pull models on startup
+    entrypoint: |
+      sh -c '
+      ollama serve &
+      pid=$!
+      sleep 5
+      ollama pull llama3.3:70b-instruct-q2_K
+      wait $pid
+      '
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly no
+    networks:
+      - app-network
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    command: minio server /data --console-address ":9001"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+
+  api-service:
+    build:
+      context: ../
+      dockerfile: services/APIService/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - PDF_SERVICE_URL=http://pdf-service:8003
+      - AGENT_SERVICE_URL=http://agent-service:8964
+      - TTS_SERVICE_URL=http://tts-service:8889
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+      - pdf-service
+      - agent-service
+      - tts-service
+      - jaeger
+    networks:
+      - app-network
+
+  agent-service:
+    build:
+      context: ../
+      dockerfile: services/AgentService/Dockerfile
+    ports:
+      - "8964:8964"
+    environment:
+      # NVIDIA_API_KEY no longer needed for Ollama
+      - REDIS_URL=redis://redis:6379
+      - MODEL_CONFIG_PATH=/app/config/models.json
+    volumes:
+      - ../models.json:/app/config/models.json
+    depends_on:
+      - redis
+      - ollama
+    networks:
+      - app-network
+
+  pdf-service:
+    build:
+      context: ../
+      dockerfile: services/PDFService/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MODEL_API_URL=${MODEL_API_URL:-http://pdf-api:8004}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  tts-service:
+    build:
+      context: ../
+      dockerfile: services/TTSService/Dockerfile.tortoise
+    ports:
+      - "8889:8889"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - NVIDIA_VISIBLE_DEVICES=0
+      - MAX_CONCURRENT_REQUESTS=3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    volumes:
+      # Mount volume for custom Tortoise voices (optional)
+      - tortoise_voices:/app/tortoise/voices
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "localhost:16686"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - app-network
+
+  pdf-api:
+    build:
+      context: ../services/PDFService/PDFModelService
+      dockerfile: Dockerfile.api
+    ports:
+      - "8004:8004"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - TEMP_FILE_DIR=/tmp/pdf_conversions
+    volumes:
+      - pdf_temp:/tmp/pdf_conversions
+    depends_on:
+      - redis
+      - celery-worker
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  celery-worker:
+    build:
+      context: ../services/PDFService/PDFModelService
+      dockerfile: Dockerfile.worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - TEMP_FILE_DIR=/tmp/pdf_conversions
+    volumes:
+      - pdf_temp:/tmp/pdf_conversions
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  redis_data:
+  pdf_temp:
+  minio_data:
+  ollama_data:  # New volume for Ollama
+  tortoise_voices:  # Volume for custom Tortoise voices
+
+networks:
+  app-network:
+    driver: bridge
