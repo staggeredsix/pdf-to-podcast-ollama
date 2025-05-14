@@ -92,9 +92,6 @@ environment:
             name: ""
             target: ""
     compose_file_path: workbench/docker-compose.yaml
-    compose-up-args:
-        - "--profile"
-        - "local"
 execution:
     apps:
         - name: frontend
@@ -118,8 +115,6 @@ execution:
             requested: 0
         sharedMemoryMB: 16000
     secrets:
-        #- variable: ELEVENLABS_API_KEY
-          #description: ""
         - variable: NVIDIA_API_KEY
           description: ""
     mounts:
