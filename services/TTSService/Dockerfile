@@ -48,7 +48,7 @@ RUN pip install \
     opentelemetry-util-http
 
 # Install TorToiSe TTS
-RUN pip install TorToiSe
+RUN pip install TorToiSe-tts
 
 # Add shared package
 COPY shared /shared
