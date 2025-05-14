@@ -1,7 +1,6 @@
 version: "3.8"
 
 services:
-  # Add Ollama service
   ollama:
     image: ollama/ollama:latest
     ports:
@@ -17,7 +16,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              device_ids: ["0"]
               capabilities: [gpu]
     # Optional: Pull models on startup
     entrypoint: |
@@ -83,7 +82,6 @@ services:
     ports:
       - "8964:8964"
     environment:
-      # NVIDIA_API_KEY no longer needed for Ollama
       - REDIS_URL=redis://redis:6379
       - MODEL_CONFIG_PATH=/app/config/models.json
     volumes:
@@ -113,7 +111,7 @@ services:
   tts-service:
     build:
       context: ../
-      dockerfile: services/TTSService/Dockerfile.tortoise
+      dockerfile: services/TTSService/Dockerfile
     ports:
       - "8889:8889"
     environment:
@@ -125,7 +123,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              device_ids: ["0"]
               capabilities: [gpu]
     depends_on:
       - redis
@@ -192,8 +190,8 @@ volumes:
   redis_data:
   pdf_temp:
   minio_data:
-  ollama_data:  # New volume for Ollama
-  tortoise_voices:  # Volume for custom Tortoise voices
+  ollama_data:  
+  tortoise_voices:  
 
 networks:
   app-network:
