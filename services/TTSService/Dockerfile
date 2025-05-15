@@ -31,7 +31,7 @@ RUN pip3 install \
     redis==5.0.1 \
     httpx==0.25.2 \
     soundfile==0.12.1 \
-    numpy==1.24.3
+    numpy==2.2.4
 
 # Install OpenTelemetry packages
 RUN pip3 install \
