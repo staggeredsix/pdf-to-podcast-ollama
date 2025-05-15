@@ -24,7 +24,7 @@ services:
       ollama serve &
       pid=$!
       sleep 5
-      ollama pull llama3.3:70b-instruct-q2_K
+      ollama pull llama3.1:8b-instruct-fp16
       wait $pid
       '
 

@@ -1,14 +1,14 @@
 {
   "reasoning": {
-    "name": "llama3.3:70b-instruct-q2_K",
+    "name": "llama3.1:8b-instruct-fp16",
     "api_base": "http://ollama:11434"
   },
   "iteration": {
-    "name": "llama3.3:70b-instruct-q2_K",
+    "name": "llama3.1:8b-instruct-fp16",
     "api_base": "http://ollama:11434"
   },
   "json": {
-    "name": "llama3.3:70b-instruct-q2_K",
+    "name": "llama3.1:8b-instruct-fp16",
     "api_base": "http://ollama:11434"
   }
 }

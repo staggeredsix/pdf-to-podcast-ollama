@@ -2,16 +2,16 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[18:37:58] Submitting PDFs for processing...
+[20:22:52] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[18:37:58] Job ID received: a3117e0e-df0b-4fb4-9fce-1fae75c6ecf5
-[18:37:58] Connected to status WebSocket
-[18:37:58] Sent ready acknowledgment
-[18:37:59] pdf: pending - Job created
-[18:37:59] pdf: processing - Processing 2 PDFs
-[18:42:22] pdf: completed - All PDFs processed successfully
-[18:42:22] agent: pending - Job created
-[18:42:22] agent: processing - Initializing processing
-[18:42:22] agent: processing - Summarizing 2 PDFs
-[18:43:03] agent: failed - Failed to get response after 5 attempts
-[18:43:03] Job failed in agent: Failed to get response after 5 attempts
+[20:22:52] Job ID received: 67e5e5f9-4b66-4398-b0c0-238c3aabeb7d
+[20:22:52] Connected to status WebSocket
+[20:22:52] Sent ready acknowledgment
+[20:22:52] pdf: pending - Job created
+[20:22:52] pdf: processing - Processing 2 PDFs
+[20:26:44] pdf: completed - All PDFs processed successfully
+[20:26:44] agent: pending - Job created
+[20:26:44] agent: processing - Initializing processing
+[20:26:44] agent: processing - Summarizing 2 PDFs
+[20:27:24] agent: failed - Failed to get response after 5 attempts
+[20:27:24] Job failed in agent: Failed to get response after 5 attempts

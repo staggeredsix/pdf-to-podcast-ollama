@@ -48,41 +48,43 @@ class ModelConfig:
 
 class LLMManager:
     """
-    Modified LLMManager to support both NVIDIA NIM and Ollama endpoints.
+    LLMManager that supports both NVIDIA NIM and Ollama endpoints.
     Automatically detects the endpoint type based on the API base URL.
+    For Ollama, uses the more compatible /api/generate endpoint instead of /api/chat.
+    No API key required for Ollama endpoints.
     """
 
     DEFAULT_CONFIGS = {
         "reasoning": {
-            "name": "llama3.1:70b",
+            "name": "llama3.2:3b",
             "api_base": "http://ollama:11434",
         },
         "iteration": {
-            "name": "llama3.1:70b",
+            "name": "llama3.2:3b",
             "api_base": "http://ollama:11434",
         },
         "json": {
-            "name": "llama3.1:70b",
+            "name": "llama3.2:3b",
             "api_base": "http://ollama:11434",
         },
     }
 
     def __init__(
         self,
-        api_key: str,
         telemetry: OpenTelemetryInstrumentation,
+        api_key: Optional[str] = None,
         config_path: Optional[str] = None,
     ):
         """
         Initialize LLMManager with telemetry.
 
         Args:
-            api_key (str): API key (not used for Ollama but kept for compatibility)
             telemetry (OpenTelemetryInstrumentation): Telemetry instrumentation instance
+            api_key (Optional[str]): API key for NVIDIA endpoints (not needed for Ollama)
             config_path (Optional[str]): Path to custom model configurations file
         """
         try:
-            self.api_key = api_key
+            self.api_key = api_key  # Only used for NVIDIA endpoints
             self.telemetry = telemetry
             self.model_configs = self._load_configurations(config_path)
             logger.info("Successfully initialized LLMManager with Ollama support")
@@ -122,15 +124,19 @@ class LLMManager:
         """Check if the API base URL is an Ollama endpoint."""
         return "ollama" in api_base.lower() or ":11434" in api_base
 
-    def _convert_langchain_to_ollama_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Convert LangChain format messages to Ollama format."""
-        ollama_messages = []
+    def _convert_chat_messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
+        """Convert chat-style messages to a single prompt for /api/generate."""
+        prompt_parts = []
         for msg in messages:
-            ollama_messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
-        return ollama_messages
+            role = msg["role"]
+            content = msg["content"]
+            if role == "system":
+                prompt_parts.append(f"System: {content}")
+            elif role == "user":
+                prompt_parts.append(f"User: {content}")
+            elif role == "assistant":
+                prompt_parts.append(f"Assistant: {content}")
+        return "\n".join(prompt_parts) + "\nAssistant:"
 
     def _make_ollama_request(
         self, 
@@ -139,24 +145,24 @@ class LLMManager:
         json_schema: Optional[Dict] = None,
         stream: bool = False
     ) -> requests.Response:
-        """Make a request to Ollama API."""
-        url = f"{model_config.api_base}/api/chat"
+        """Make a request to Ollama API using /api/generate endpoint."""
+        url = f"{model_config.api_base}/api/generate"
+        
+        # Convert chat messages to a prompt
+        prompt = self._convert_chat_messages_to_prompt(messages)
         
         data = {
             "model": model_config.name,
-            "messages": self._convert_langchain_to_ollama_messages(messages),
+            "prompt": prompt,
             "stream": stream
         }
         
         # Handle JSON schema for structured output
         if json_schema:
-            # Ollama uses a different format for structured output
-            # We'll add the schema as a system message or use format parameter
             data["format"] = "json"
-            # Add schema instruction to the last message
-            if messages:
-                schema_instruction = f"\n\nPlease respond with valid JSON following this schema: {json.dumps(json_schema)}"
-                data["messages"][-1]["content"] += schema_instruction
+            # Add schema instruction to the prompt
+            schema_instruction = f"\n\nPlease respond with valid JSON following this schema: {json.dumps(json_schema)}"
+            data["prompt"] += schema_instruction
         
         return requests.post(url, json=data, stream=stream)
 
@@ -167,22 +173,24 @@ class LLMManager:
         json_schema: Optional[Dict] = None,
         stream: bool = False
     ) -> httpx.Response:
-        """Make an async request to Ollama API."""
-        url = f"{model_config.api_base}/api/chat"
+        """Make an async request to Ollama API using /api/generate endpoint."""
+        url = f"{model_config.api_base}/api/generate"
+        
+        # Convert chat messages to a prompt
+        prompt = self._convert_chat_messages_to_prompt(messages)
         
         data = {
             "model": model_config.name,
-            "messages": self._convert_langchain_to_ollama_messages(messages),
+            "prompt": prompt,
             "stream": stream
         }
         
         # Handle JSON schema for structured output
         if json_schema:
             data["format"] = "json"
-            # Add schema instruction to the last message
-            if messages:
-                schema_instruction = f"\n\nPlease respond with valid JSON following this schema: {json.dumps(json_schema)}"
-                data["messages"][-1]["content"] += schema_instruction
+            # Add schema instruction to the prompt
+            schema_instruction = f"\n\nPlease respond with valid JSON following this schema: {json.dumps(json_schema)}"
+            data["prompt"] += schema_instruction
         
         async with httpx.AsyncClient() as client:
             return await client.post(url, json=data)
@@ -209,7 +217,7 @@ class LLMManager:
                     raise ValueError(f"Unknown model key: {model_key}")
 
                 if self._is_ollama_endpoint(model_config.api_base):
-                    # Use Ollama API
+                    # Use Ollama API with /api/generate
                     for attempt in range(retries):
                         try:
                             response = self._make_ollama_request(
@@ -218,7 +226,7 @@ class LLMManager:
                             response.raise_for_status()
                             
                             result = response.json()
-                            content = result["message"]["content"]
+                            content = result.get("response", "")
                             
                             if json_schema:
                                 # Parse JSON response
@@ -240,9 +248,11 @@ class LLMManager:
                             logger.warning(f"Retry {attempt + 1}/{retries} failed: {e}")
                             time.sleep(2 ** attempt)
                 else:
-                    # Fallback to original LangChain logic for NVIDIA endpoints
-                    # (Keep original implementation for backwards compatibility)
-                    pass
+                    # For NVIDIA endpoints, require API key
+                    if not self.api_key:
+                        raise ValueError("API key required for NVIDIA endpoints")
+                    # TODO: Implement NVIDIA NIM support here if needed
+                    raise NotImplementedError("NVIDIA NIM support not implemented yet")
 
             except Exception as e:
                 span.set_status(StatusCode.ERROR)
@@ -274,7 +284,7 @@ class LLMManager:
                     raise ValueError(f"Unknown model key: {model_key}")
 
                 if self._is_ollama_endpoint(model_config.api_base):
-                    # Use Ollama API
+                    # Use Ollama API with /api/generate
                     for attempt in range(retries):
                         try:
                             response = await self._make_ollama_request_async(
@@ -283,7 +293,7 @@ class LLMManager:
                             response.raise_for_status()
                             
                             result = response.json()
-                            content = result["message"]["content"]
+                            content = result.get("response", "")
                             
                             if json_schema:
                                 # Parse JSON response
@@ -304,6 +314,12 @@ class LLMManager:
                                 raise
                             logger.warning(f"Retry {attempt + 1}/{retries} failed: {e}")
                             await asyncio.sleep(2 ** attempt)
+                else:
+                    # For NVIDIA endpoints, require API key
+                    if not self.api_key:
+                        raise ValueError("API key required for NVIDIA endpoints")
+                    # TODO: Implement NVIDIA NIM support here if needed
+                    raise NotImplementedError("NVIDIA NIM support not implemented yet")
 
             except Exception as e:
                 span.set_status(StatusCode.ERROR)
@@ -335,7 +351,7 @@ class LLMManager:
                     raise ValueError(f"Unknown model key: {model_key}")
 
                 if self._is_ollama_endpoint(model_config.api_base):
-                    # Use Ollama streaming API
+                    # Use Ollama streaming API with /api/generate
                     response = self._make_ollama_request(
                         model_config, messages, json_schema, stream=True
                     )
@@ -345,12 +361,18 @@ class LLMManager:
                     for line in response.iter_lines():
                         if line:
                             chunk = json.loads(line)
-                            if chunk.get("message", {}).get("content"):
-                                full_content += chunk["message"]["content"]
+                            if chunk.get("response"):
+                                full_content += chunk["response"]
                     
                     if json_schema and full_content:
                         return json.loads(full_content)
                     return full_content
+                else:
+                    # For NVIDIA endpoints, require API key
+                    if not self.api_key:
+                        raise ValueError("API key required for NVIDIA endpoints")
+                    # TODO: Implement NVIDIA NIM support here if needed
+                    raise NotImplementedError("NVIDIA NIM support not implemented yet")
 
             except Exception as e:
                 span.set_status(StatusCode.ERROR)
@@ -382,19 +404,20 @@ class LLMManager:
                     raise ValueError(f"Unknown model key: {model_key}")
 
                 if self._is_ollama_endpoint(model_config.api_base):
-                    # Use Ollama streaming API
-                    url = f"{model_config.api_base}/api/chat"
+                    # Use Ollama streaming API with /api/generate
+                    url = f"{model_config.api_base}/api/generate"
+                    prompt = self._convert_chat_messages_to_prompt(messages)
+                    
                     data = {
                         "model": model_config.name,
-                        "messages": self._convert_langchain_to_ollama_messages(messages),
+                        "prompt": prompt,
                         "stream": True
                     }
                     
                     if json_schema:
                         data["format"] = "json"
-                        if messages:
-                            schema_instruction = f"\n\nPlease respond with valid JSON following this schema: {json.dumps(json_schema)}"
-                            data["messages"][-1]["content"] += schema_instruction
+                        schema_instruction = f"\n\nPlease respond with valid JSON following this schema: {json.dumps(json_schema)}"
+                        data["prompt"] += schema_instruction
                     
                     async with httpx.AsyncClient() as client:
                         async with client.stream('POST', url, json=data) as response:
@@ -403,12 +426,18 @@ class LLMManager:
                             async for line in response.aiter_lines():
                                 if line:
                                     chunk = json.loads(line)
-                                    if chunk.get("message", {}).get("content"):
-                                        full_content += chunk["message"]["content"]
+                                    if chunk.get("response"):
+                                        full_content += chunk["response"]
                             
                             if json_schema and full_content:
                                 return json.loads(full_content)
                             return full_content
+                else:
+                    # For NVIDIA endpoints, require API key
+                    if not self.api_key:
+                        raise ValueError("API key required for NVIDIA endpoints")
+                    # TODO: Implement NVIDIA NIM support here if needed
+                    raise NotImplementedError("NVIDIA NIM support not implemented yet")
 
             except Exception as e:
                 span.set_status(StatusCode.ERROR)
