@@ -69,27 +69,6 @@ RUN echo "torch==$(python3 -c 'import torch; print(torch.__version__)')" > /tmp/
 RUN pip3 install git+https://github.com/nari-labs/dia.git --constraint /tmp/constraints.txt && \
     python3 -c "import dia; from dia.model import Dia; print('SUCCESS: Method 1 worked')" || \
     echo "Method 1 failed, trying method 2..."
-
-# Method 2: Clone and manual install if Method 1 failed
-RUN if ! python3 -c "import dia" 2>/dev/null; then \
-        echo "Trying method 2: Clone and install manually" && \
-        git clone https://github.com/nari-labs/dia.git /tmp/dia && \
-        cd /tmp/dia && \
-        pip3 install -e . --constraint /tmp/constraints.txt && \
-        rm -rf /tmp/dia; \
-    fi
-
-# Method 3: Copy source directly if Methods 1 and 2 failed
-RUN if ! python3 -c "import dia" 2>/dev/null; then \
-        echo "Trying method 3: Direct copy" && \
-        git clone https://github.com/nari-labs/dia.git /opt/dia && \
-        SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])") && \
-        if [ -d "/opt/dia/dia" ]; then \
-            cp -r /opt/dia/dia $SITE_PACKAGES/ && \
-            chmod -R 755 $SITE_PACKAGES/dia; \
-        fi && \
-        export PYTHONPATH="/opt/dia:$PYTHONPATH"; \
-    fi
     
 RUN if ! python3 -c "import dia" 2>/dev/null; then \
         echo "Trying method 4: Sledgehammer Install" && \
