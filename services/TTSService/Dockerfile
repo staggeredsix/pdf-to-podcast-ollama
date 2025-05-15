@@ -24,14 +24,14 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 # Verify PyTorch installation
 RUN python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
 
-# Install core dependencies with exact versions to prevent conflicts
+# Install core dependencies
 RUN pip3 install \
     fastapi==0.104.1 \
     uvicorn[standard]==0.24.0 \
     redis==5.0.1 \
     httpx==0.25.2 \
     soundfile==0.12.1 \
-    numpy==2.2.4
+    numpy==1.24.3
 
 # Install OpenTelemetry packages
 RUN pip3 install \
@@ -46,7 +46,7 @@ RUN pip3 install \
     opentelemetry-instrumentation-urllib3==0.42b0 \
     opentelemetry-util-http==0.42b0
 
-# Install Dia dependencies while avoiding torch reinstallation
+# Install Dia dependencies (without torch)
 RUN pip3 install \
     transformers>=4.30.0 \
     accelerate>=0.20.0 \
@@ -56,31 +56,20 @@ RUN pip3 install \
     einops \
     safetensors \
     huggingface-hub \
-    librosa
+    librosa \
+    descript-audio-codec
 
-# Create constraints file to prevent torch reinstallation
-RUN echo "torch==$(python3 -c 'import torch; print(torch.__version__)')" > /tmp/constraints.txt && \
-    echo "torchaudio==$(python3 -c 'import torchaudio; print(torchaudio.__version__)')" >> /tmp/constraints.txt && \
-    echo "torchvision==$(python3 -c 'import torchvision; print(torchvision.__version__)')" >> /tmp/constraints.txt && \
-    echo "numpy==$(python3 -c 'import numpy; print(numpy.__version__)')" >> /tmp/constraints.txt && \
-    cat /tmp/constraints.txt
+# Install Dia while ignoring version conflicts - single command approach
+RUN pip3 install git+https://github.com/nari-labs/dia.git \
+    --force-reinstall \
+    --no-deps \
+    --upgrade \
+    --disable-pip-version-check
 
-# Try Method 1: Direct pip install from GitHub with constraints
-RUN pip3 install git+https://github.com/nari-labs/dia.git --constraint /tmp/constraints.txt && \
-    python3 -c "import dia; from dia.model import Dia; print('SUCCESS: Method 1 worked')" || \
-    echo "Method 1 failed, trying method 2..."
-    
-RUN if ! python3 -c "import dia" 2>/dev/null; then \
-        echo "Trying method 4: Sledgehammer Install" && \
-        pip3 install git+https://github.com/nari-labs/dia.git \
-        --force-reinstall \
-        --no-deps \
-        --upgrade \
-        --disable-pip-version-check
-
-# Final verification
-RUN python3 -c "import dia; print('Final check: dia imported successfully')" && \
-    python3 -c "from dia.model import Dia; print('Final check: Dia class imported successfully')"
+# Verify installation
+RUN python3 -c "import dia; print('Dia imported successfully')" && \
+    python3 -c "from dia.model import Dia; print('Dia.model imported successfully')" && \
+    python3 -c "import torch; print(f'Final PyTorch version: {torch.__version__}')"
 
 # Add shared package
 COPY shared /shared
@@ -89,9 +78,6 @@ RUN pip3 install /shared
 # Copy service code
 WORKDIR /app
 COPY services/TTSService /app
-
-# Set environment variables
-ENV PYTHONPATH="/opt/dia:$PYTHONPATH"
 
 # Expose port
 EXPOSE 8889
