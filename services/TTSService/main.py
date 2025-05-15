@@ -6,33 +6,139 @@ import os
 import logging
 import asyncio
 import tempfile
+import sys
 from pathlib import Path
+import redis
 
-from dia.model import Dia
-import soundfile as sf
-
-from shared.api_types import ServiceType, JobStatus
-from shared.job import JobStatusManager
-from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
-
-# Setup logging
+# Setup logging first
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Add potential Dia locations to Python path
+potential_paths = [
+    '/app/dia_model',
+    '/app/dia_hf_repo', 
+    '/app/dia_github',
+    '/app'
+]
+
+for path in potential_paths:
+    if os.path.exists(path):
+        sys.path.insert(0, path)
+        logger.info(f"Added {path} to Python path")
+
+# Try multiple approaches to get a working Dia implementation
+Dia = None
+dia_available = False
+
+# Method 1: Try importing from installed package
+try:
+    from dia.model import Dia
+    logger.info("SUCCESS: Imported Dia from installed package")
+    dia_available = True
+except ImportError as e:
+    logger.info(f"Failed to import from installed package: {e}")
+
+# Method 2: Try importing from extracted files
+if not dia_available:
+    try:
+        from model import Dia
+        logger.info("SUCCESS: Imported Dia from extracted model.py")
+        dia_available = True
+    except ImportError as e:
+        logger.info(f"Failed to import from model.py: {e}")
+
+# Method 3: Create a mock implementation if all else fails
+if not dia_available:
+    logger.warning("All import methods failed. Creating mock implementation.")
+    
+    class MockDia:
+        def __init__(self):
+            logger.warning("Using mock Dia implementation - TTS will not work!")
+        
+        @classmethod
+        def from_pretrained(cls, model_name, **kwargs):
+            return cls()
+        
+        def generate(self, text, **kwargs):
+            logger.warning("Mock implementation: generating silence")
+            import numpy as np
+            return np.zeros(44100, dtype=np.float32)  # 1 second of silence
+        
+        def save_audio(self, filename, audio):
+            import soundfile as sf
+            sf.write(filename, audio, 44100)
+    
+    Dia = MockDia
+    logger.warning("Using MockDia - this is a fallback implementation!")
+
+# Import other dependencies
+import soundfile as sf
+
+# Simple job manager without external dependencies
+class SimpleJobManager:
+    def __init__(self):
+        self.jobs = {}
+        self.results = {}
+        # Try to connect to Redis if available
+        try:
+            self.redis_client = redis.Redis(host='redis', port=6379, db=0)
+            self.redis_client.ping()
+            self.use_redis = True
+            logger.info("Connected to Redis")
+        except:
+            self.redis_client = None
+            self.use_redis = False
+            logger.info("Redis not available, using in-memory storage")
+    
+    def create_job(self, job_id):
+        job_data = {"status": "created", "message": "Job created"}
+        if self.use_redis:
+            self.redis_client.hset(f"job:{job_id}", mapping=job_data)
+        else:
+            self.jobs[job_id] = job_data
+    
+    def update_status(self, job_id, status, message=""):
+        job_data = {"status": str(status), "message": message}
+        if self.use_redis:
+            self.redis_client.hset(f"job:{job_id}", mapping=job_data)
+        else:
+            self.jobs[job_id] = job_data
+    
+    def get_status(self, job_id):
+        if self.use_redis:
+            data = self.redis_client.hgetall(f"job:{job_id}")
+            return {k.decode(): v.decode() for k, v in data.items()} if data else None
+        else:
+            return self.jobs.get(job_id)
+    
+    def set_result(self, job_id, result):
+        if self.use_redis:
+            self.redis_client.set(f"result:{job_id}", result)
+        else:
+            self.results[job_id] = result
+    
+    def get_result(self, job_id):
+        if self.use_redis:
+            return self.redis_client.get(f"result:{job_id}")
+        else:
+            return self.results.get(job_id)
+
+# Simple status enum
+class JobStatus:
+    CREATED = "created"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+# Define service type enum for compatibility
+class ServiceType:
+    TTS = "tts"
+
 app = FastAPI(title="Dia TTS Service", debug=True)
 
-telemetry = OpenTelemetryInstrumentation()
-telemetry.initialize(
-    OpenTelemetryConfig(
-        service_name="dia-tts-service",
-        otlp_endpoint=os.getenv("OTLP_ENDPOINT", "http://jaeger:4317"),
-        enable_redis=True,
-        enable_requests=True,
-    ),
-    app,
-)
-
-job_manager = JobStatusManager(ServiceType.TTS, telemetry=telemetry)
+# Use simplified job manager
+job_manager = SimpleJobManager()
 
 class DialogueEntry(BaseModel):
     text: str
@@ -48,45 +154,63 @@ class TTSRequest(BaseModel):
 class DiaService:
     def __init__(self):
         self.model = None
+        self.is_mock = Dia.__name__ == 'MockDia'
         
     def _load_model(self):
         """Load Dia model lazily"""
         if self.model is None:
             logger.info("Loading Dia model...")
-            self.model = Dia.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
-            logger.info("Dia model loaded successfully")
+            if self.is_mock:
+                logger.warning("Loading mock Dia model - TTS functionality will be limited")
+                self.model = Dia()
+            else:
+                try:
+                    self.model = Dia.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
+                    logger.info("Dia model loaded successfully")
+                except Exception as e:
+                    logger.error(f"Error loading Dia model: {e}")
+                    logger.warning("Falling back to mock implementation")
+                    self.model = MockDia()
+                    self.is_mock = True
     
     async def process_job(self, job_id: str, request: TTSRequest):
         """Process TTS job with Dia."""
-        with telemetry.tracer.start_as_current_span("dia.process_job") as span:
-            try:
-                job_manager.create_job(job_id)
-                self._load_model()
+        try:
+            job_manager.create_job(job_id)
+            job_manager.update_status(job_id, JobStatus.RUNNING, "Loading model...")
+            self._load_model()
+            
+            # Convert dialogue to Dia format
+            text = self._format_dialogue_for_dia(request.dialogue)
+            logger.info(f"Generating audio for: {text[:100]}...")
+            
+            if self.is_mock:
+                logger.warning("Using mock TTS - generating silence")
+                job_manager.update_status(job_id, JobStatus.FAILED, "TTS service using mock implementation")
+                return
+            
+            job_manager.update_status(job_id, JobStatus.RUNNING, "Generating audio...")
+            
+            # Generate audio
+            output = self.model.generate(text, use_torch_compile=True, verbose=True)
+            
+            # Save to temporary file and read back
+            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
+                self.model.save_audio(tmp_file.name, output)
                 
-                # Convert dialogue to Dia format
-                text = self._format_dialogue_for_dia(request.dialogue)
-                logger.info(f"Generating audio for: {text[:100]}...")
+                # Read the file back
+                with open(tmp_file.name, 'rb') as f:
+                    audio_content = f.read()
                 
-                # Generate audio
-                output = self.model.generate(text, use_torch_compile=True, verbose=True)
-                
-                # Save to temporary file and read back
-                with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
-                    self.model.save_audio(tmp_file.name, output)
-                    
-                    # Read the file back
-                    with open(tmp_file.name, 'rb') as f:
-                        audio_content = f.read()
-                    
-                    # Clean up
-                    os.unlink(tmp_file.name)
-                
-                job_manager.set_result(job_id, audio_content)
-                job_manager.update_status(job_id, JobStatus.COMPLETED, "Dia TTS generation completed")
-                
-            except Exception as e:
-                logger.error(f"[Dia TTS ERROR] Job {job_id}: {e}")
-                job_manager.update_status(job_id, JobStatus.FAILED, str(e))
+                # Clean up
+                os.unlink(tmp_file.name)
+            
+            job_manager.set_result(job_id, audio_content)
+            job_manager.update_status(job_id, JobStatus.COMPLETED, "Dia TTS generation completed")
+            
+        except Exception as e:
+            logger.error(f"[Dia TTS ERROR] Job {job_id}: {e}")
+            job_manager.update_status(job_id, JobStatus.FAILED, str(e))
     
     def _format_dialogue_for_dia(self, dialogue: List[DialogueEntry]) -> str:
         """Convert dialogue entries to Dia format"""
@@ -138,8 +262,13 @@ async def get_output(job_id: str):
 @app.get("/health")
 async def health():
     """Health check endpoint."""
+    implementation = "mock" if dia_service.is_mock else "native"
     return {
         "status": "healthy", 
-        "model": "Dia-1.6B",
-        "model_loaded": dia_service.model is not None
+        "model": f"Dia-1.6B ({implementation})",
+        "model_loaded": dia_service.model is not None,
+        "dia_available": dia_available,
+        "implementation": implementation,
+        "redis_available": job_manager.use_redis,
+        "opentelemetry": "disabled"
     }

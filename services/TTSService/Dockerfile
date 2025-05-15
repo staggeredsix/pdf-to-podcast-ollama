@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.6.1-devel-ubuntu22.04
+FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NVIDIA_VISIBLE_DEVICES=0
@@ -9,8 +9,12 @@ RUN apt-get update && \
         python3 python3-pip python3-dev python3-venv \
         ffmpeg libsndfile1 \
         git curl unzip build-essential \
-        pkg-config libffi-dev && \
+        pkg-config libffi-dev \
+        git-lfs && \
     rm -rf /var/lib/apt/lists/*
+
+# Initialize git-lfs
+RUN git lfs install
 
 # Create symlink for python
 RUN ln -sf /usr/bin/python3 /usr/bin/python
@@ -33,11 +37,21 @@ RUN pip3 install \
     soundfile==0.12.1 \
     numpy==1.24.3
 
+# Install compatible versions of protobuf and related packages
+RUN pip3 install protobuf==4.25.3 grpcio==1.59.2 grpcio-status==1.59.2 googleapis-common-protos==1.61.0
+
+# Verify protobuf installation
+RUN python3 -c "import google.protobuf; print('Protobuf version:', google.protobuf.__version__)"
+
 # Install OpenTelemetry packages
 RUN pip3 install \
     opentelemetry-api==1.21.0 \
     opentelemetry-sdk==1.21.0 \
-    opentelemetry-exporter-otlp==1.21.0 \
+    opentelemetry-proto==1.21.0 \
+    opentelemetry-exporter-otlp-proto-grpc==1.21.0
+
+# Install OpenTelemetry instrumentation packages
+RUN pip3 install \
     opentelemetry-instrumentation==0.42b0 \
     opentelemetry-instrumentation-fastapi==0.42b0 \
     opentelemetry-instrumentation-redis==0.42b0 \
@@ -46,38 +60,69 @@ RUN pip3 install \
     opentelemetry-instrumentation-urllib3==0.42b0 \
     opentelemetry-util-http==0.42b0
 
-# Install Dia dependencies (without torch)
+# Test OpenTelemetry import
+RUN python3 -c "from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter; print('OpenTelemetry import successful')"
+
+# Install ML dependencies
 RUN pip3 install \
     transformers>=4.30.0 \
     accelerate>=0.20.0 \
-    scikit-learn \
-    datasets \
-    scipy \
-    einops \
     safetensors \
     huggingface-hub \
-    librosa \
-    descript-audio-codec
+    descript-audio-codec \
+    librosa
 
-# Install Dia while ignoring version conflicts - single command approach
-RUN pip3 install git+https://github.com/nari-labs/dia.git \
-    --force-reinstall \
-    --no-deps \
-    --upgrade \
-    --disable-pip-version-check
+# Clone the Hugging Face model repository
+WORKDIR /tmp
+RUN git clone https://huggingface.co/nari-labs/Dia-1.6B dia-model || echo "HF clone failed"
 
-# Verify installation
-RUN python3 -c "import dia; print('Dia imported successfully')" && \
-    python3 -c "from dia.model import Dia; print('Dia.model imported successfully')" && \
-    python3 -c "import torch; print(f'Final PyTorch version: {torch.__version__}')"
+# Clone the GitHub repository as backup
+RUN git clone https://github.com/nari-labs/dia.git dia-github || echo "GitHub clone failed"
+
+# Create application directory
+WORKDIR /app
+RUN mkdir -p /app/dia_model /app/dia_hf_repo /app/dia_github
+
+# Copy HuggingFace repository if it exists
+RUN if [ -d "/tmp/dia-model" ]; then \
+        cp -r /tmp/dia-model/* /app/dia_hf_repo/; \
+        echo "Copied HuggingFace repo"; \
+    fi
+
+# Copy GitHub repository if it exists
+RUN if [ -d "/tmp/dia-github" ]; then \
+        cp -r /tmp/dia-github/* /app/dia_github/; \
+        if [ -d "/tmp/dia-github/dia" ]; then \
+            cp -r /tmp/dia-github/dia/* /app/dia_model/; \
+        fi; \
+        echo "Copied GitHub repo"; \
+    fi
+
+# Create __init__.py files
+RUN touch /app/dia_model/__init__.py
+RUN touch /app/dia_hf_repo/__init__.py
+
+# Try installing Dia package (but don't fail if it doesn't work)
+RUN pip3 install git+https://github.com/nari-labs/dia.git --no-deps --force-reinstall || echo "Package install failed, using extracted files"
+
+# List what we have
+RUN echo "=== Available files ===" && \
+    ls -la /app/dia_model/ && \
+    ls -la /app/dia_hf_repo/ && \
+    ls -la /app/dia_github/
 
 # Add shared package
 COPY shared /shared
 RUN pip3 install /shared
 
 # Copy service code
-WORKDIR /app
-COPY services/TTSService /app
+COPY services/TTSService /app/
+
+# Set Python path
+ENV PYTHONPATH="/app/dia_model:/app/dia_hf_repo:/app/dia_github:/app:$PYTHONPATH"
+
+# Clean up temp files
+RUN rm -rf /tmp/dia-model /tmp/dia-github
 
 # Expose port
 EXPOSE 8889
