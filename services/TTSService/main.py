@@ -9,9 +9,13 @@ import tempfile
 import sys
 from pathlib import Path
 import redis
+import traceback
 
-# Setup logging first
-logging.basicConfig(level=logging.INFO)
+# Setup more detailed logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Add potential Dia locations to Python path
@@ -104,6 +108,7 @@ class SimpleJobManager:
             self.redis_client.hset(f"job:{job_id}", mapping=job_data)
         else:
             self.jobs[job_id] = job_data
+        logger.info(f"Job {job_id}: {status} - {message}")
     
     def get_status(self, job_id):
         if self.use_redis:
@@ -165,10 +170,19 @@ class DiaService:
                 self.model = Dia()
             else:
                 try:
+                    logger.info("Attempting to load Dia model from pretrained...")
                     self.model = Dia.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
                     logger.info("Dia model loaded successfully")
+                    
+                    # Check if model has Triton backend configured
+                    if hasattr(self.model, 'backend') or hasattr(self.model, 'triton_model'):
+                        logger.info("Model appears to have Triton backend configured")
+                    else:
+                        logger.warning("Model may not have Triton backend configured")
+                        
                 except Exception as e:
                     logger.error(f"Error loading Dia model: {e}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
                     logger.warning("Falling back to mock implementation")
                     self.model = MockDia()
                     self.is_mock = True
@@ -176,13 +190,15 @@ class DiaService:
     async def process_job(self, job_id: str, request: TTSRequest):
         """Process TTS job with Dia."""
         try:
+            logger.info(f"Starting job {job_id}")
             job_manager.create_job(job_id)
             job_manager.update_status(job_id, JobStatus.RUNNING, "Loading model...")
             self._load_model()
             
             # Convert dialogue to Dia format
             text = self._format_dialogue_for_dia(request.dialogue)
-            logger.info(f"Generating audio for: {text[:100]}...")
+            logger.info(f"Formatted text for Dia: {text[:200]}...")
+            logger.info(f"Full text length: {len(text)} characters")
             
             if self.is_mock:
                 logger.warning("Using mock TTS - generating silence")
@@ -190,26 +206,51 @@ class DiaService:
                 return
             
             job_manager.update_status(job_id, JobStatus.RUNNING, "Generating audio...")
+            logger.info("About to call model.generate()...")
             
-            # Generate audio
-            output = self.model.generate(text, use_torch_compile=True, verbose=True)
+            # Add more verbose logging around the generation call
+            try:
+                # Generate audio with more detailed logging
+                logger.info("Calling Dia.generate() with use_torch_compile=True")
+                output = self.model.generate(text, use_torch_compile=True, verbose=True)
+                logger.info(f"Generation completed. Output type: {type(output)}")
+                
+                if output is not None:
+                    logger.info(f"Generated audio shape/length: {getattr(output, 'shape', len(output) if hasattr(output, '__len__') else 'unknown')}")
+                else:
+                    logger.error("Generation returned None!")
+                    raise Exception("Model generate() returned None")
+                    
+            except Exception as gen_error:
+                logger.error(f"Error during generation: {gen_error}")
+                logger.error(f"Generation traceback: {traceback.format_exc()}")
+                raise
+            
+            job_manager.update_status(job_id, JobStatus.RUNNING, "Saving audio...")
+            logger.info("About to save audio to temporary file...")
             
             # Save to temporary file and read back
             with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
+                logger.info(f"Saving to temporary file: {tmp_file.name}")
                 self.model.save_audio(tmp_file.name, output)
+                logger.info(f"Audio saved successfully")
                 
                 # Read the file back
                 with open(tmp_file.name, 'rb') as f:
                     audio_content = f.read()
+                logger.info(f"Read back {len(audio_content)} bytes from file")
                 
                 # Clean up
                 os.unlink(tmp_file.name)
+                logger.info("Temporary file cleaned up")
             
             job_manager.set_result(job_id, audio_content)
             job_manager.update_status(job_id, JobStatus.COMPLETED, "Dia TTS generation completed")
+            logger.info(f"Job {job_id} completed successfully")
             
         except Exception as e:
             logger.error(f"[Dia TTS ERROR] Job {job_id}: {e}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             job_manager.update_status(job_id, JobStatus.FAILED, str(e))
     
     def _format_dialogue_for_dia(self, dialogue: List[DialogueEntry]) -> str:
@@ -228,6 +269,7 @@ class DiaService:
             speaker_tag = speaker_mapping[speaker_key]
             dia_text += f"{speaker_tag} {entry.text} "
         
+        logger.debug(f"Speaker mapping: {speaker_mapping}")
         return dia_text.strip()
 
 # Initialize service
@@ -236,6 +278,8 @@ dia_service = DiaService()
 @app.post("/generate_tts", status_code=202)
 async def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks):
     """Start TTS generation job."""
+    logger.info(f"Received TTS request for job {request.job_id}")
+    logger.info(f"Dialogue entries: {len(request.dialogue)}")
     background_tasks.add_task(dia_service.process_job, request.job_id, request)
     return {"job_id": request.job_id}
 
@@ -263,6 +307,23 @@ async def get_output(job_id: str):
 async def health():
     """Health check endpoint."""
     implementation = "mock" if dia_service.is_mock else "native"
+    model_info = {}
+    
+    # Try to get more info about the loaded model
+    if dia_service.model is not None and not dia_service.is_mock:
+        try:
+            # Check for common Triton-related attributes
+            triton_info = {}
+            if hasattr(dia_service.model, 'backend'):
+                triton_info['backend'] = str(dia_service.model.backend)
+            if hasattr(dia_service.model, 'triton_model'):
+                triton_info['triton_model'] = str(dia_service.model.triton_model)
+            if hasattr(dia_service.model, 'config'):
+                triton_info['config'] = str(type(dia_service.model.config))
+            model_info['triton_info'] = triton_info
+        except Exception as e:
+            model_info['triton_check_error'] = str(e)
+    
     return {
         "status": "healthy", 
         "model": f"Dia-1.6B ({implementation})",
@@ -270,5 +331,6 @@ async def health():
         "dia_available": dia_available,
         "implementation": implementation,
         "redis_available": job_manager.use_redis,
-        "opentelemetry": "disabled"
+        "opentelemetry": "disabled",
+        "model_info": model_info
     }
