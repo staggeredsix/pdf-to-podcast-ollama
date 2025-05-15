@@ -90,6 +90,14 @@ RUN if ! python3 -c "import dia" 2>/dev/null; then \
         fi && \
         export PYTHONPATH="/opt/dia:$PYTHONPATH"; \
     fi
+    
+RUN if ! python3 -c "import dia" 2>/dev/null; then \
+        echo "Trying method 4: Sledgehammer Install" && \
+        pip3 install git+https://github.com/nari-labs/dia.git \
+        --force-reinstall \
+        --no-deps \
+        --upgrade \
+        --disable-pip-version-check
 
 # Final verification
 RUN python3 -c "import dia; print('Final check: dia imported successfully')" && \
