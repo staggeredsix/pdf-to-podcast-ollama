@@ -2,14 +2,35 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[10:46:10] Submitting PDFs for processing...
+[11:51:19] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[10:46:10] Job ID received: 6a8ac048-9937-448e-9bdf-3cb8c4097df7
-[10:46:10] Connected to status WebSocket
-[10:46:10] Sent ready acknowledgment
-[10:46:10] pdf: pending - Job created
-[10:46:10] pdf: processing - Processing 1 PDFs
-[10:46:53] pdf: completed - All PDFs processed successfully
-[10:46:53] agent: pending - Job created
-[10:46:53] agent: processing - Initializing processing
-[10:46:53] agent: processing - Summarizing 1 PDFs
+[11:51:19] Job ID received: 592f8485-25fc-40d3-84a6-34bb4eba349a
+[11:51:19] Connected to status WebSocket
+[11:51:19] Sent ready acknowledgment
+[11:51:19] pdf: pending - Job created
+[11:51:19] pdf: processing - Processing 1 PDFs
+[11:52:01] pdf: completed - All PDFs processed successfully
+[11:52:01] agent: pending - Job created
+[11:52:01] agent: processing - Initializing processing
+[11:52:01] agent: processing - Summarizing 1 PDFs
+[11:52:15] agent: processing - Generating initial outline
+[11:52:20] agent: processing - Converting raw outline to structured format
+[11:52:29] agent: processing - Processing segment 1/5: Introduction (0:00 - 0:05)
+[11:52:29] agent: processing - Processing segment 2/5: Section 1: Global Market Risks (0:06 - 0:30)
+[11:52:29] agent: processing - Processing segment 3/5: Section 2: Investment Strategies and Recommendations (0:31 - 1:00)
+[11:52:29] agent: processing - Processing segment 4/5: Section 3: Global Presence and Data (1:01 - 1:20)
+[11:52:29] agent: processing - Processing segment 5/5: Conclusion (1:21 - 2:00)
+[11:53:13] agent: processing - Generating dialogue
+[11:53:13] agent: processing - Converting segment 1/5 to dialogue
+[11:53:13] agent: processing - Converting segment 2/5 to dialogue
+[11:53:13] agent: processing - Converting segment 3/5 to dialogue
+[11:53:13] agent: processing - Converting segment 4/5 to dialogue
+[11:53:13] agent: processing - Converting segment 5/5 to dialogue
+[11:53:49] agent: processing - Combining dialogue segments
+[11:53:49] agent: processing - Combining segment 2/5 with existing dialogue
+[11:54:03] agent: processing - Combining segment 3/5 with existing dialogue
+[11:54:17] agent: processing - Combining segment 4/5 with existing dialogue
+[11:54:31] agent: processing - Combining segment 5/5 with existing dialogue
+[11:54:45] agent: processing - Formatting final conversation
+[11:55:12] agent: failed - Failed to get streaming response after 5 attempts
+[11:55:12] Job failed in agent: Failed to get streaming response after 5 attempts
