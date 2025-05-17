@@ -1,13 +1,4 @@
-"""
-FastAPI service for text-to-speech generation using Dia TTS model.
 
-This service provides endpoints for generating speech from text using either:
-1. A Triton Inference Server (primary method)
-2. Local Dia model implementation (fallback)
-
-It supports both synchronous and asynchronous processing, with WebSocket status updates
-and Redis-based job tracking.
-"""
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel, Field
