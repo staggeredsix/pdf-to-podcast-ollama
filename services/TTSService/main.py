@@ -297,16 +297,20 @@ class DiaModelWrapper:
     @classmethod
     def from_pretrained(cls, *args, **kwargs):
         try:
-            if hasattr(model_module, 'DiaModel'):
-                return model_module.DiaModel.from_pretrained(*args, **kwargs)
+            # Look for Dia class first (based on GitHub examples)
+            if hasattr(model_module, 'Dia'):
+                return model_module.Dia.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
+            # Look for DiaModel second
+            elif hasattr(model_module, 'DiaModel'):
+                return model_module.DiaModel.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
             else:
                 # Alternative: import the DiaModel class
                 for attr_name in dir(model_module):
                     if attr_name.endswith('Model') and hasattr(getattr(model_module, attr_name), 'from_pretrained'):
                         model_cls = getattr(model_module, attr_name)
-                        return model_cls.from_pretrained(*args, **kwargs)
+                        return model_cls.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
                 # Last resort - try to initialize directly
-                return model_module.model_from_pretrained(*args, **kwargs)
+                return model_module.model_from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
         except Exception as e:
             print(f"Error initializing model: {{e}}")
             raise
@@ -318,7 +322,34 @@ class DiaModelWrapper:
             
             # Initialize model with download if needed
             logger.info("Initializing Dia model via direct loader...")
-            self.model = direct_loader.DiaModelWrapper.from_pretrained()
+            try:
+                self.model = direct_loader.DiaModelWrapper.from_pretrained()
+                logger.info("Dia model initialized successfully via direct loader!")
+            except Exception as e:
+                logger.error(f"Error initializing model with direct loader: {e}")
+                # Try fallback with only the model path
+                try:
+                    logger.info("Attempting fallback initialization method...")
+                    # Import the model module directly
+                    spec = importlib.util.spec_from_file_location(
+                        "model_direct", 
+                        str(dia_module_path / "model.py")
+                    )
+                    model_direct = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(model_direct)
+                    
+                    # Check which model class is available
+                    if hasattr(model_direct, 'Dia'):
+                        self.model = model_direct.Dia.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
+                    elif hasattr(model_direct, 'DiaModel'):
+                        self.model = model_direct.DiaModel.from_pretrained("nari-labs/Dia-1.6B", compute_dtype="float16")
+                    else:
+                        raise ImportError("Could not find Dia or DiaModel class in the module")
+                    
+                    logger.info("Fallback initialization successful!")
+                except Exception as e2:
+                    logger.error(f"Fallback initialization also failed: {e2}")
+                    raise
             
             # Ensure it has generate method
             if not hasattr(self.model, 'generate'):
@@ -364,11 +395,26 @@ class DiaModelWrapper:
         try:
             # Use model to generate audio
             with torch.no_grad():
-                audio_array = self.model.generate(input_text)
+                # Special handling based on the model's API
+                if hasattr(self.model, 'generate'):
+                    logger.info("Using model.generate() method")
+                    audio_array = self.model.generate(input_text)
+                elif hasattr(self.model, 'synthesize'):
+                    logger.info("Using model.synthesize() method")
+                    audio_array = self.model.synthesize(input_text)
+                elif hasattr(self.model, '__call__'):
+                    logger.info("Using model.__call__() method")
+                    audio_array = self.model(input_text)
+                else:
+                    raise RuntimeError("Model has no compatible interface for generation")
+            
+            # Get the sample rate from the model or use default
+            sample_rate = getattr(self.model, 'sample_rate', 44100)
+            logger.info(f"Using sample rate: {sample_rate}")
             
             # Convert numpy array to audio file in memory
             audio_buffer = io.BytesIO()
-            sf.write(audio_buffer, audio_array, self.model.sample_rate, format='mp3')
+            sf.write(audio_buffer, audio_array, sample_rate, format='mp3')
             audio_buffer.seek(0)
             
             return audio_buffer.read()
