@@ -35,15 +35,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Service configuration
-TRITON_URL = os.getenv("TRITON_URL", "http://triton:8000")
+TRITON_HOST = os.getenv("TRITON_HOST", "triton")
+TRITON_PORT = os.getenv("TRITON_PORT", "8000")
+TRITON_URL = os.getenv("TRITON_URL", f"http://{TRITON_HOST}:{TRITON_PORT}")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 ENABLE_LOCAL_FALLBACK = os.getenv("ENABLE_LOCAL_FALLBACK", "true").lower() == "true"
 FORCE_MODEL_DOWNLOAD = os.getenv("FORCE_MODEL_DOWNLOAD", "false").lower() == "true"
 HF_TOKEN = os.getenv("HF_TOKEN", None)  # Hugging Face token for private models
+TRITON_REQUEST_TIMEOUT = int(os.getenv("TRITON_REQUEST_TIMEOUT", "5"))
 MODEL_PATHS = [
     "/app/dia_model",
     "/app/dia_hf_repo",
-    "/app/dia_github"
+    "/app/dia_github",
+    "/app/dia"  # Added an additional possible location
 ]
 
 # Configure HF token if provided
@@ -155,7 +159,8 @@ class TritonTTSClient(BaseTTSClient):
     def __init__(self, url=f"{TRITON_URL}/v2/models/dia-1.6b/infer"):
         super().__init__()
         self.url = url
-        logger.info(f"Initialized Triton TTS client with URL: {self.url}")
+        self.timeout = TRITON_REQUEST_TIMEOUT
+        logger.info(f"Initialized Triton TTS client with URL: {self.url} (timeout: {self.timeout}s)")
         
     async def generate_speech(self, input_text: str) -> bytes:
         """Generate speech using Triton inference server."""
@@ -173,14 +178,18 @@ class TritonTTSClient(BaseTTSClient):
         }
         
         try:
+            # First try connecting to the server with a short timeout to fail quickly
             response = requests.post(
                 self.url, 
                 headers={"Content-Type": "application/json"}, 
                 data=json.dumps(payload),
-                timeout=120
+                timeout=self.timeout
             )
             response.raise_for_status()
             return response.content
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Triton connection error (check if server is running): {e}")
+            raise RuntimeError(f"Failed to connect to Triton server: {e}")
         except requests.exceptions.RequestException as e:
             logger.error(f"Triton request failed: {e}")
             raise RuntimeError(f"Failed to generate speech via Triton: {e}")
@@ -210,6 +219,10 @@ class LocalDiaTTSClient(BaseTTSClient):
         
         logger.info(f"Found Dia model at {dia_module_path}")
         
+        # Create a package directory to handle relative imports
+        package_dir = Path("/app/dia_package")
+        os.makedirs(package_dir, exist_ok=True)
+        
         # Set up model paths for download
         model_path = Path("/app/models/dia")
         os.makedirs(model_path, exist_ok=True)
@@ -219,62 +232,126 @@ class LocalDiaTTSClient(BaseTTSClient):
         os.environ["HF_HOME"] = str(model_path / "hf")
         
         try:
-            # Add Dia module path to sys.path
-            sys.path.insert(0, str(dia_module_path.parent))
+            # Try direct import from installed package first
+            logger.info("Trying direct import from installed package...")
+            import importlib
+            try:
+                # Try pip-installed package
+                dia_module = importlib.import_module('dia')
+                from dia.model import DiaModel
+                logger.info("Successfully imported DiaModel from installed package")
+                
+                # Initialize model with download if needed
+                logger.info("Initializing Dia model (will download if not found)...")
+                self.model = DiaModel.from_pretrained()
+                logger.info("Dia model initialized successfully!")
+                return
+            except (ImportError, AttributeError) as e:
+                logger.warning(f"Direct import failed: {e}")
+                
+            # If direct import fails, try using our found module files
+            logger.info("Trying to load directly from model.py...")
             
-            # Try to import Dia modules
-            import dia
-            from dia import DiaModel
+            # Create a simple wrapper to load the model directly
+            with open(package_dir / "direct_loader.py", "w") as f:
+                f.write(f"""
+import sys
+import torch
+import os
+
+# Add model path to sys.path
+sys.path.insert(0, "{str(dia_module_path.parent)}")
+
+# Direct imports without relative paths
+from importlib.util import spec_from_file_location, module_from_spec
+
+# Import the model module
+model_spec = spec_from_file_location("model_module", "{str(dia_module_path / 'model.py')}")
+model_module = module_from_spec(model_spec)
+model_spec.loader.exec_module(model_module)
+
+# Import any required submodules
+try:
+    audio_spec = spec_from_file_location("audio_module", "{str(dia_module_path / 'audio.py')}")
+    audio_module = module_from_spec(audio_spec)
+    audio_spec.loader.exec_module(audio_module)
+    # Monkey patch to fix relative imports
+    model_module.apply_audio_delay = audio_module.apply_audio_delay
+    model_module.build_delay_indices = audio_module.build_delay_indices
+    model_module.build_revert_indices = audio_module.build_revert_indices
+    model_module.revert_audio_delay = audio_module.revert_audio_delay
+except Exception as e:
+    print(f"Audio module import failed but may not be needed: {{e}}")
+
+# Import to fix common relative imports
+try:
+    codec_spec = spec_from_file_location("codec_module", "{str(dia_module_path / 'codec.py')}")
+    codec_module = module_from_spec(codec_spec)
+    codec_spec.loader.exec_module(codec_module)
+    model_module.EncodecModel = codec_module.EncodecModel
+except Exception as e:
+    print(f"Codec module import failed but may not be needed: {{e}}")
+
+# Create a class that uses model's DiaModel directly
+class DiaModelWrapper:
+    @classmethod
+    def from_pretrained(cls, *args, **kwargs):
+        try:
+            if hasattr(model_module, 'DiaModel'):
+                return model_module.DiaModel.from_pretrained(*args, **kwargs)
+            else:
+                # Alternative: import the DiaModel class
+                for attr_name in dir(model_module):
+                    if attr_name.endswith('Model') and hasattr(getattr(model_module, attr_name), 'from_pretrained'):
+                        model_cls = getattr(model_module, attr_name)
+                        return model_cls.from_pretrained(*args, **kwargs)
+                # Last resort - try to initialize directly
+                return model_module.model_from_pretrained(*args, **kwargs)
+        except Exception as e:
+            print(f"Error initializing model: {{e}}")
+            raise
+""")
+            
+            # Import the direct loader
+            sys.path.insert(0, str(package_dir))
+            import direct_loader
             
             # Initialize model with download if needed
-            logger.info("Initializing Dia model (will download if not found)...")
-            try:
-                # First attempt with local model only
-                self.model = DiaModel.from_pretrained(local_files_only=True)
-                logger.info("Dia model loaded from local files!")
-            except Exception as e_local:
-                logger.warning(f"Local model not found: {e_local}. Attempting to download...")
-                # If local fails, try to download
-                try:
-                    self.model = DiaModel.from_pretrained(
-                        repo_id="nari-labs/Dia-1.6B",
-                        force_download=True,
-                        resume_download=True
-                    )
-                    logger.info("Dia model downloaded and initialized successfully!")
-                except Exception as e_download:
-                    logger.error(f"Download attempt failed: {e_download}")
-                    raise
+            logger.info("Initializing Dia model via direct loader...")
+            self.model = direct_loader.DiaModelWrapper.from_pretrained()
+            
+            # Ensure it has generate method
+            if not hasattr(self.model, 'generate'):
+                logger.warning("Model doesn't have generate method, adding compatibility wrapper")
+                original_model = self.model
                 
-        except ImportError as e:
-            logger.error(f"Failed to import Dia module: {e}")
-            # Try alternative import method
-            try:
-                spec = importlib.util.spec_from_file_location(
-                    "dia_model", 
-                    str(dia_module_path / "model.py")
-                )
-                dia_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(dia_module)
+                # Create a wrapper class with generate method if needed
+                class ModelWrapper:
+                    def __init__(self, model):
+                        self.model = model
+                        self.sample_rate = getattr(model, 'sample_rate', 24000)
+                    
+                    def generate(self, text):
+                        # Try different method names
+                        if hasattr(self.model, 'generate'):
+                            return self.model.generate(text)
+                        elif hasattr(self.model, 'synthesize'):
+                            return self.model.synthesize(text)
+                        elif hasattr(self.model, 'tts'):
+                            return self.model.tts(text)
+                        elif hasattr(self.model, 'text_to_speech'):
+                            return self.model.text_to_speech(text)
+                        else:
+                            # Generic approach as last resort
+                            logger.warning("Using forward pass as generate method")
+                            return self.model(text)
                 
-                # Try to load with download capability
-                try:
-                    self.model = dia_module.DiaModel.from_pretrained(local_files_only=True)
-                    logger.info("Dia model loaded from local files via alternative method!")
-                except Exception as e_local:
-                    logger.warning(f"Local model not found: {e_local}. Attempting to download...")
-                    self.model = dia_module.DiaModel.from_pretrained(
-                        repo_id="nari-labs/Dia-1.6B",
-                        force_download=True,
-                        resume_download=True
-                    )
-                    logger.info("Dia model downloaded and initialized successfully via alternative method!")
-            except Exception as e2:
-                logger.error(f"Alternative import and download failed: {e2}")
-                logger.error(traceback.format_exc())
-                self.model = None
+                self.model = ModelWrapper(original_model)
+            
+            logger.info("Dia model initialized successfully via direct loader!")
+            
         except Exception as e:
-            logger.error(f"Failed to initialize Dia model: {e}")
+            logger.error(f"All model initialization methods failed: {e}")
             logger.error(traceback.format_exc())
             self.model = None
     
@@ -301,27 +378,52 @@ class LocalDiaTTSClient(BaseTTSClient):
             raise RuntimeError(f"Failed to generate speech locally: {e}")
 
 # Initialize TTS clients with fallback mechanism
+primary_tts_client = None
 try:
     logger.info("Initializing Triton TTS client as primary")
-    primary_tts_client = TritonTTSClient()
+    logger.info(f"Triton server address: {TRITON_HOST}:{TRITON_PORT}")
     
-    # Try a test request to make sure Triton is working
-    dummy_request = {
-        "inputs": [{"name": "INPUT_TEXT", "shape": [1], "datatype": "BYTES", "data": ["[S1] Test."]}],
-        "outputs": [{"name": "OUTPUT_AUDIO"}]
-    }
-    test_response = requests.post(
-        primary_tts_client.url, 
-        headers={"Content-Type": "application/json"},
-        data=json.dumps(dummy_request),
-        timeout=5
-    )
-    
-    if test_response.status_code != 200:
-        logger.warning(f"Triton test request failed with status {test_response.status_code}")
-        raise Exception("Triton test request failed")
+    # Check if Triton is reachable first
+    try:
+        # Do a quick test to see if we can reach Triton
+        health_url = f"{TRITON_URL}/v2/health/ready"
+        logger.info(f"Testing Triton connection: {health_url}")
+        health_response = requests.get(health_url, timeout=TRITON_REQUEST_TIMEOUT)
         
-    logger.info("Triton TTS client initialized successfully")
+        if health_response.status_code == 200:
+            logger.info("Triton server is reachable and ready")
+            primary_tts_client = TritonTTSClient()
+            
+            # Try a minimal test request to confirm the model is loaded
+            dummy_request = {
+                "inputs": [{"name": "INPUT_TEXT", "shape": [1], "datatype": "BYTES", "data": ["[S1] Test."]}],
+                "outputs": [{"name": "OUTPUT_AUDIO"}]
+            }
+            
+            try:
+                test_response = requests.post(
+                    primary_tts_client.url, 
+                    headers={"Content-Type": "application/json"},
+                    data=json.dumps(dummy_request),
+                    timeout=TRITON_REQUEST_TIMEOUT
+                )
+                
+                if test_response.status_code == 200:
+                    logger.info("Triton TTS model verified working!")
+                else:
+                    logger.warning(f"Triton test request failed with status {test_response.status_code}: {test_response.text}")
+                    raise Exception(f"Triton test request failed with status {test_response.status_code}")
+            except Exception as e:
+                logger.warning(f"Triton model test failed: {e}")
+                primary_tts_client = None
+                raise Exception(f"Triton model test failed: {e}")
+        else:
+            logger.warning(f"Triton health check failed with status {health_response.status_code}")
+            raise Exception(f"Triton health check failed with status {health_response.status_code}")
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Triton server connection test failed: {e}")
+        raise Exception(f"Triton connection test failed: {e}")
+        
 except Exception as e:
     logger.warning(f"Triton TTS client initialization failed: {e}")
     primary_tts_client = None

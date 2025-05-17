@@ -2,42 +2,14 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[10:33:48] Submitting PDFs for processing...
+[10:46:10] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[10:33:48] Job ID received: 4ab62905-bb85-4d8e-bf53-cda5a174ab65
-[10:33:48] Connected to status WebSocket
-[10:33:48] Sent ready acknowledgment
-[10:33:48] pdf: pending - Job created
-[10:33:48] pdf: processing - Processing 1 PDFs
-[10:34:31] pdf: completed - All PDFs processed successfully
-[10:34:31] agent: pending - Job created
-[10:34:31] agent: processing - Initializing processing
-[10:34:31] agent: processing - Summarizing 1 PDFs
-[10:34:41] agent: processing - Generating initial outline
-[10:34:47] agent: processing - Converting raw outline to structured format
-[10:34:55] agent: processing - Processing segment 1/5: Intro (0-5)
-[10:34:55] agent: processing - Processing segment 2/5: Segment 1: Key Findings and Trends (5-30)
-[10:34:55] agent: processing - Processing segment 3/5: Segment 2: Investment Risks and Recommendations (30-50)
-[10:34:55] agent: processing - Processing segment 4/5: Segment 3: Financial Analysis and Prospects (50-110)
-[10:34:55] agent: processing - Processing segment 5/5: Conclusion (110-120)
-[10:35:27] agent: processing - Generating dialogue
-[10:35:27] agent: processing - Converting segment 1/5 to dialogue
-[10:35:27] agent: processing - Converting segment 2/5 to dialogue
-[10:35:27] agent: processing - Converting segment 3/5 to dialogue
-[10:35:27] agent: processing - Converting segment 4/5 to dialogue
-[10:35:27] agent: processing - Converting segment 5/5 to dialogue
-[10:36:10] agent: processing - Combining dialogue segments
-[10:36:10] agent: processing - Combining segment 2/5 with existing dialogue
-[10:36:20] agent: processing - Combining segment 3/5 with existing dialogue
-[10:36:34] agent: processing - Combining segment 4/5 with existing dialogue
-[10:36:48] agent: processing - Combining segment 5/5 with existing dialogue
-[10:37:02] agent: processing - Formatting final conversation
-[10:37:20] agent: completed - Transcription completed successfully
-[10:40:10] WebSocket connection closed, reconnecting...
-[10:40:11] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[10:40:12] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[10:40:14] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[10:40:18] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[10:40:23] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[10:40:30] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[10:40:42] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
+[10:46:10] Job ID received: 6a8ac048-9937-448e-9bdf-3cb8c4097df7
+[10:46:10] Connected to status WebSocket
+[10:46:10] Sent ready acknowledgment
+[10:46:10] pdf: pending - Job created
+[10:46:10] pdf: processing - Processing 1 PDFs
+[10:46:53] pdf: completed - All PDFs processed successfully
+[10:46:53] agent: pending - Job created
+[10:46:53] agent: processing - Initializing processing
+[10:46:53] agent: processing - Summarizing 1 PDFs
