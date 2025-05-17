@@ -2,34 +2,14 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[09:56:14] Submitting PDFs for processing...
+[10:04:57] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[09:56:14] Job ID received: 5e3ec4d6-1952-4f3f-910f-051e76bdfbed
-[09:56:14] Connected to status WebSocket
-[09:56:14] Sent ready acknowledgment
-[09:56:14] pdf: pending - Job created
-[09:56:14] pdf: processing - Processing 1 PDFs
-[09:57:16] pdf: completed - All PDFs processed successfully
-[09:57:16] agent: pending - Job created
-[09:57:16] agent: processing - Initializing processing
-[09:57:16] agent: processing - Summarizing 1 PDFs
-[09:57:25] agent: processing - Generating initial outline
-[09:57:30] agent: processing - Converting raw outline to structured format
-[09:57:37] agent: processing - Processing segment 1/5: Introduction
-[09:57:37] agent: processing - Processing segment 2/5: Regulatory Disclosures and Disclaimer
-[09:57:37] agent: processing - Processing segment 3/5: Risks and Concerns
-[09:57:37] agent: processing - Processing segment 4/5: Trends and Changes
-[09:57:37] agent: processing - Processing segment 5/5: Conclusion
-[09:58:11] agent: processing - Generating dialogue
-[09:58:11] agent: processing - Converting segment 1/5 to dialogue
-[09:58:11] agent: processing - Converting segment 2/5 to dialogue
-[09:58:11] agent: processing - Converting segment 3/5 to dialogue
-[09:58:11] agent: processing - Converting segment 4/5 to dialogue
-[09:58:11] agent: processing - Converting segment 5/5 to dialogue
-[09:58:46] agent: processing - Combining dialogue segments
-[09:58:46] agent: processing - Combining segment 2/5 with existing dialogue
-[09:59:00] agent: processing - Combining segment 3/5 with existing dialogue
-[09:59:14] agent: processing - Combining segment 4/5 with existing dialogue
-[09:59:27] agent: processing - Combining segment 5/5 with existing dialogue
-[09:59:41] agent: processing - Formatting final conversation
-[09:59:59] agent: completed - Transcription completed successfully
+[10:04:57] Job ID received: 22189a19-29c1-41a3-a569-d304e51e08de
+[10:04:57] Connected to status WebSocket
+[10:04:57] Sent ready acknowledgment
+[10:04:57] pdf: pending - Job created
+[10:04:57] pdf: processing - Processing 1 PDFs
+[10:05:59] pdf: completed - All PDFs processed successfully
+[10:05:59] agent: pending - Job created
+[10:05:59] agent: processing - Initializing processing
+[10:05:59] agent: processing - Summarizing 1 PDFs
