@@ -2,35 +2,35 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[12:07:28] Submitting PDFs for processing...
+[16:33:48] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[12:07:28] Job ID received: 47470b34-bdac-41cd-9c8a-4cc6da4daf80
-[12:07:28] Connected to status WebSocket
-[12:07:28] Sent ready acknowledgment
-[12:07:29] pdf: pending - Job created
-[12:07:29] pdf: processing - Processing 1 PDFs
-[12:08:12] pdf: completed - All PDFs processed successfully
-[12:08:12] agent: pending - Job created
-[12:08:12] agent: processing - Initializing processing
-[12:08:12] agent: processing - Summarizing 1 PDFs
-[12:08:21] agent: processing - Generating initial outline
-[12:08:27] agent: processing - Converting raw outline to structured format
-[12:08:34] agent: processing - Processing segment 1/5: Introduction
-[12:08:34] agent: processing - Processing segment 2/5: Regulatory Compliance and Investment Risks
-[12:08:34] agent: processing - Processing segment 3/5: Product Availability and Market Trends
-[12:08:34] agent: processing - Processing segment 4/5: Key Takeaways and Recommendations
-[12:08:34] agent: processing - Processing segment 5/5: Conclusion
-[12:09:02] agent: processing - Generating dialogue
-[12:09:02] agent: processing - Converting segment 1/5 to dialogue
-[12:09:02] agent: processing - Converting segment 2/5 to dialogue
-[12:09:02] agent: processing - Converting segment 3/5 to dialogue
-[12:09:02] agent: processing - Converting segment 4/5 to dialogue
-[12:09:02] agent: processing - Converting segment 5/5 to dialogue
-[12:09:35] agent: processing - Combining dialogue segments
-[12:09:35] agent: processing - Combining segment 2/5 with existing dialogue
-[12:09:43] agent: processing - Combining segment 3/5 with existing dialogue
-[12:09:56] agent: processing - Combining segment 4/5 with existing dialogue
-[12:10:10] agent: processing - Combining segment 5/5 with existing dialogue
-[12:10:24] agent: processing - Formatting final conversation
-[12:10:44] agent: failed - Failed to get streaming response after 5 attempts
-[12:10:44] Job failed in agent: Failed to get streaming response after 5 attempts
+[16:33:48] Job ID received: 89037813-2778-4cd8-a4b2-1b240db6823c
+[16:33:48] Connected to status WebSocket
+[16:33:48] Sent ready acknowledgment
+[16:33:49] pdf: pending - Job created
+[16:33:49] pdf: processing - Processing 1 PDFs
+[16:35:10] pdf: completed - All PDFs processed successfully
+[16:35:10] agent: pending - Job created
+[16:35:10] agent: processing - Initializing processing
+[16:35:10] agent: processing - Summarizing 1 PDFs
+[16:35:48] agent: processing - Generating initial outline
+[16:35:53] agent: processing - Converting raw outline to structured format
+[16:36:03] agent: processing - Processing segment 1/5: Introduction (0:00 - 0:10)
+[16:36:03] agent: processing - Processing segment 2/5: Section 1: General Investment Disclosures (0:11 - 0:40)
+[16:36:03] agent: processing - Processing segment 3/5: Section 2: Regulatory Risks (0:41 - 1:10)
+[16:36:03] agent: processing - Processing segment 4/5: Section 3: Investment Advice and Recommendations (1:11 - 1:50)
+[16:36:03] agent: processing - Processing segment 5/5: Conclusion (1:51 - 2:00)
+[16:36:39] agent: processing - Generating dialogue
+[16:36:39] agent: processing - Converting segment 1/5 to dialogue
+[16:36:39] agent: processing - Converting segment 2/5 to dialogue
+[16:36:39] agent: processing - Converting segment 3/5 to dialogue
+[16:36:39] agent: processing - Converting segment 4/5 to dialogue
+[16:36:39] agent: processing - Converting segment 5/5 to dialogue
+[16:37:18] agent: processing - Combining dialogue segments
+[16:37:18] agent: processing - Combining segment 2/5 with existing dialogue
+[16:37:32] agent: processing - Combining segment 3/5 with existing dialogue
+[16:37:47] agent: processing - Combining segment 4/5 with existing dialogue
+[16:38:01] agent: processing - Combining segment 5/5 with existing dialogue
+[16:38:16] agent: processing - Formatting final conversation
+[16:38:35] agent: failed - Failed to get streaming response after 5 attempts
+[16:38:35] Job failed in agent: Failed to get streaming response after 5 attempts
