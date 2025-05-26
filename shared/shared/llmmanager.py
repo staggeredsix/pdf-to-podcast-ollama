@@ -493,6 +493,10 @@ class LLMManager:
                 parsed = json.loads(content)
                 return parsed
             except json.JSONDecodeError as e2:
+                # Try to extract a balanced JSON block if available
+                extracted = self._extract_json_block(content)
+                if extracted:
+                    return json.loads(extracted)
                 logger.error(f"JSON parsing failed even after cleaning. Error: {e2}")
                 logger.error(f"Content: {content[:500]}...")
                 
@@ -514,6 +518,21 @@ class LLMManager:
                     pass
                     
                 raise ValueError(f"Could not parse JSON: {e2}")
+
+    def _extract_json_block(self, text: str) -> Optional[str]:
+        """Return the first balanced JSON object found in text."""
+        start = text.find('{')
+        while start != -1:
+            depth = 0
+            for idx in range(start, len(text)):
+                if text[idx] == '{':
+                    depth += 1
+                elif text[idx] == '}':
+                    depth -= 1
+                    if depth == 0:
+                        return text[start:idx + 1]
+            start = text.find('{', start + 1)
+        return None
 
     async def query_async(
         self,
