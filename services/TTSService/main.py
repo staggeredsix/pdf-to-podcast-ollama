@@ -16,6 +16,17 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Ensure potential local Dia paths are available before attempting import
+POTENTIAL_DIA_PATHS = [
+    "/app/dia_model",
+    "/app/dia_hf_repo",
+    "/app/dia_github",
+    "/app/dia",
+]
+for _p in POTENTIAL_DIA_PATHS:
+    if os.path.exists(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
+
 # Service configuration
 TRITON_HOST = os.getenv("TRITON_HOST", "triton")
 TRITON_PORT = os.getenv("TRITON_PORT", "8000")
@@ -253,6 +264,14 @@ class TritonTTSClient:
 # Initialize TTS engine and clients
 dia_tts = DiaTTS()
 local_tts_available = dia_tts.is_initialized
+
+# Initialize Dia when the application starts to avoid first-request delays
+@app.on_event("startup")
+async def startup_event():
+    if not dia_tts.is_initialized:
+        logger.info("Startup: initializing Dia TTS engine")
+        dia_tts.initialize()
+        logger.info(f"Dia initialization status: {dia_tts.is_initialized}")
 
 # Initialize Triton client
 primary_tts_client = None

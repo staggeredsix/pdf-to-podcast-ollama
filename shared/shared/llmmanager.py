@@ -425,6 +425,9 @@ class LLMManager:
 
     def _clean_and_parse_json(self, content: str) -> dict:
         """Clean and parse JSON response from Ollama."""
+        # Explicitly import ujson here to avoid any local scope issues that could
+        # lead to "local variable 'json' referenced before assignment" errors
+        import ujson as json
         # Remove any leading/trailing whitespace
         content = content.strip()
         
