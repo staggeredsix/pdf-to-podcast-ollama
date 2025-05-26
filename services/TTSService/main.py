@@ -11,6 +11,7 @@ import json
 import random
 import traceback
 import time
+import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -61,7 +62,9 @@ class SimpleJobManager:
     def __init__(self):
         self.jobs = {}
         self.results = {}
+
         self.seeds = {}
+
         try:
             self.redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=False)
             self.redis_client.ping()
@@ -100,6 +103,7 @@ class SimpleJobManager:
         else:
             self.results[job_id] = result
 
+
     def get_seed(self, job_id: str, speaker: str) -> int:
         """Get or create a deterministic seed for a speaker within a job."""
         if job_id not in self.seeds:
@@ -113,6 +117,7 @@ class SimpleJobManager:
         self.jobs.pop(job_id, None)
         self.results.pop(job_id, None)
         self.seeds.pop(job_id, None)
+
 
     def get_result(self, job_id):
         if self.use_redis:
@@ -200,12 +205,14 @@ class DiaTTS:
         return text.strip()
     
     def generate_speech(self, text, speaker_seeds: Optional[Dict[str, int]] = None):
+
         """Generate speech from input text.
 
         The Dia API does not expose per-speaker seed control, but we can achieve
         reproducible output by seeding the underlying random generators.  A
         combined seed is derived from the provided speaker seeds.
         """
+
         if not self.is_initialized or self.model is None:
             raise RuntimeError("Dia TTS engine is not initialized")
 
@@ -214,14 +221,18 @@ class DiaTTS:
             import torch
             import soundfile as sf
             import io
-
+e
             if speaker_seeds:
                 combined_seed = sum(speaker_seeds.values()) % (2**31)
                 random.seed(combined_seed)
                 torch.manual_seed(combined_seed)
 
+
             with torch.no_grad():
-                output = self.model.generate(text)
+                if speaker_seeds:
+                    output = self.model.generate(text, speaker_seeds=speaker_seeds)
+                else:
+                    output = self.model.generate(text)
             
             # Get the sample rate, or use default
             sample_rate = getattr(self.model, "sample_rate", 44100)
@@ -236,6 +247,28 @@ class DiaTTS:
             logger.error(f"Speech generation failed: {e}")
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
+
+
+def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = 4000) -> List[List[DialogueEntry]]:
+    """Split dialogue into chunks that stay under a character limit."""
+    chunks: List[List[DialogueEntry]] = []
+    current: List[DialogueEntry] = []
+    length = 0
+
+    for entry in dialogue:
+        approx_len = len(entry.text) + 10
+        if length + approx_len > max_chars and current:
+            chunks.append(current)
+            current = [entry]
+            length = approx_len
+        else:
+            current.append(entry)
+            length += approx_len
+
+    if current:
+        chunks.append(current)
+
+    return chunks
 
 # Triton TTS client
 class TritonTTSClient:
@@ -361,6 +394,7 @@ async def process_job(job_id: str, request: TTSRequest):
         job_manager.create_job(job_id)
         job_manager.update_status(job_id, JobStatus.RUNNING, "Processing TTS request")
 
+
         def chunk_dialogue(entries: List[DialogueEntry], max_chars: int = 1000) -> List[List[DialogueEntry]]:
             """Split dialogue entries into chunks that fit within max_chars."""
             chunks: List[List[DialogueEntry]] = []
@@ -382,9 +416,11 @@ async def process_job(job_id: str, request: TTSRequest):
         dialogue_chunks = chunk_dialogue(request.dialogue)
         audio_pieces: List[bytes] = []
 
+
         if primary_tts_client:
             logger.info("Using Triton for TTS generation")
             client_type = "Triton"
+
             formatter = primary_tts_client.format_input
             async def gen(text: str) -> bytes:
                 return await primary_tts_client.generate_speech(text)
