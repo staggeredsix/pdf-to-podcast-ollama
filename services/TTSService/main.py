@@ -7,16 +7,14 @@ from pydantic import BaseModel
 from enum import Enum
 from datetime import datetime
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
-import redis
 import random
 import requests
 import json
 import traceback
 import time
-import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -468,10 +466,14 @@ except Exception as e:
 
 # API endpoints
 @app.post("/generate_tts", status_code=202)
-async def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks):
+async def generate_tts(request_body: TTSRequest, background_tasks: BackgroundTasks):
     """Generate TTS audio from dialogue text."""
-    job_id = request.job_id
-    logger.info(f"Received TTS request for job {job_id} with {len(request.dialogue)} entries")
+    job_id = request_body.job_id
+    logger.info(
+        "Received TTS request for job %s with %d entries",
+        job_id,
+        len(request_body.dialogue),
+    )
     
     if not primary_tts_client and not local_tts_available:
         raise HTTPException(
@@ -479,7 +481,7 @@ async def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks):
             detail="No TTS services available. Both Triton and local Dia failed to initialize."
         )
     
-    background_tasks.add_task(process_job, job_id, request)
+    background_tasks.add_task(process_job, job_id, request_body)
     return {"job_id": job_id}
 
 async def process_job(job_id: str, job_data: dict, request: TTSRequest):
