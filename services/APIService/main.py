@@ -48,7 +48,10 @@ from pydantic import ValidationError
 import redis
 import requests
 import httpx
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 import uuid
 import os
 import logging

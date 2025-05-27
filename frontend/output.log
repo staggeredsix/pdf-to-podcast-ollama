@@ -2,14 +2,34 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[10:46:10] Submitting PDFs for processing...
+[17:00:52] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[10:46:10] Job ID received: 6a8ac048-9937-448e-9bdf-3cb8c4097df7
-[10:46:10] Connected to status WebSocket
-[10:46:10] Sent ready acknowledgment
-[10:46:10] pdf: pending - Job created
-[10:46:10] pdf: processing - Processing 1 PDFs
-[10:46:53] pdf: completed - All PDFs processed successfully
-[10:46:53] agent: pending - Job created
-[10:46:53] agent: processing - Initializing processing
-[10:46:53] agent: processing - Summarizing 1 PDFs
+[17:00:52] Job ID received: 274284fb-27ad-4a79-a4ba-4fd7cfd191c9
+[17:00:52] Connected to status WebSocket
+[17:00:52] Sent ready acknowledgment
+[17:00:52] pdf: pending - Job created
+[17:00:52] pdf: processing - Processing 1 PDFs
+[17:02:09] pdf: completed - All PDFs processed successfully
+[17:02:09] agent: pending - Job created
+[17:02:09] agent: processing - Initializing processing
+[17:02:09] agent: processing - Summarizing 1 PDFs
+[17:02:19] agent: processing - Generating initial outline
+[17:02:25] agent: processing - Converting raw outline to structured format
+[17:02:32] agent: processing - Processing segment 1/5: Introduction (0:00 - 0:10)
+[17:02:32] agent: processing - Processing segment 2/5: General Investment Disclosures and Warnings (0:11 - 0:35)
+[17:02:32] agent: processing - Processing segment 3/5: Regulatory Disclosures and Oversight (0:36 - 1:00)
+[17:02:32] agent: processing - Processing segment 4/5: Sustainability and Tax Considerations (1:01 - 1:20)
+[17:02:32] agent: processing - Processing segment 5/5: Conclusion and Disclaimer (1:21 - 2:00)
+[17:03:06] agent: processing - Generating dialogue
+[17:03:06] agent: processing - Converting segment 1/5 to dialogue
+[17:03:06] agent: processing - Converting segment 2/5 to dialogue
+[17:03:06] agent: processing - Converting segment 3/5 to dialogue
+[17:03:06] agent: processing - Converting segment 4/5 to dialogue
+[17:03:06] agent: processing - Converting segment 5/5 to dialogue
+[17:03:37] agent: processing - Combining dialogue segments
+[17:03:37] agent: processing - Combining segment 2/5 with existing dialogue
+[17:03:50] agent: processing - Combining segment 3/5 with existing dialogue
+[17:04:03] agent: processing - Combining segment 4/5 with existing dialogue
+[17:04:17] agent: processing - Combining segment 5/5 with existing dialogue
+[17:04:31] agent: processing - Formatting final conversation
+[17:04:50] agent: completed - Transcription completed successfully

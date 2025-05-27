@@ -4,13 +4,17 @@ import sys
 import logging
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
+
 from typing import List, Dict, Optional
+
 import redis
 import random
 import requests
 import json
+
 import traceback
 import time
+import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,15 +35,7 @@ for _p in POTENTIAL_DIA_PATHS:
 TRITON_HOST = os.getenv("TRITON_HOST", "triton")
 TRITON_PORT = os.getenv("TRITON_PORT", "8000")
 TRITON_URL = os.getenv("TRITON_URL", f"http://{TRITON_HOST}:{TRITON_PORT}")
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 TRITON_REQUEST_TIMEOUT = int(os.getenv("TRITON_REQUEST_TIMEOUT", "5"))
-
-# Status constants
-class JobStatus:
-    CREATED = "created"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
 
 # Model definitions
 class DialogueEntry(BaseModel):
@@ -56,7 +52,19 @@ class TTSRequest(BaseModel):
 # Initialize FastAPI app
 app = FastAPI(title="Dia TTS Service")
 
+
+# Set up OpenTelemetry instrumentation
+telemetry = OpenTelemetryInstrumentation()
+config = OpenTelemetryConfig(
+    service_name="tts-service",
+    otlp_endpoint=os.getenv("OTLP_ENDPOINT", "http://jaeger:4317"),
+    enable_redis=True,
+    enable_requests=True,
+)
+telemetry.initialize(config, app)
+
 # Job manager for tracking TTS jobs
+
 class SimpleJobManager:
     def __init__(self):
         self.jobs = {}
@@ -79,32 +87,40 @@ class SimpleJobManager:
         else:
             self.jobs[job_id] = data
 
-    def update_status(self, job_id, status, message=""):
-        data = {"status": status, "message": message}
-        if self.use_redis:
-            self.redis_client.hset(f"job:{job_id}", mapping=data)
-        else:
-            self.jobs[job_id] = data
-        logger.info(f"Job {job_id}: {status} - {message}")
 
-    def get_status(self, job_id):
-        if self.use_redis:
-            data = self.redis_client.hgetall(f"job:{job_id}")
-            return {k.decode(): v.decode() for k, v in data.items()} if data else None
-        else:
-            return self.jobs.get(job_id)
 
-    def set_result(self, job_id, result):
-        if self.use_redis:
-            self.redis_client.set(f"result:{job_id}", result)
-        else:
-            self.results[job_id] = result
 
-    def get_result(self, job_id):
-        if self.use_redis:
-            return self.redis_client.get(f"result:{job_id}")
-        else:
-            return self.results.get(job_id)
+class DialogueFormatter:
+    """Utility to format dialogue into Dia-friendly chunks."""
+
+    def __init__(self, chunk_char_limit: int = 1200):
+        self.chunk_char_limit = chunk_char_limit
+
+    def format_chunks(self, dialogue: List[DialogueEntry]) -> Tuple[List[str], Dict[str, str]]:
+        """Return chunks of formatted dialogue and the speaker map."""
+        speaker_map: Dict[str, str] = {}
+        speaker_idx = 1
+        chunks: List[str] = []
+        current = ""
+
+        for entry in dialogue:
+            key = entry.speaker.lower()
+            if key not in speaker_map:
+                speaker_map[key] = f"[S{speaker_idx}]"
+                speaker_idx += 1
+            tag = speaker_map[key]
+            segment = f"{tag} {entry.text} "
+            if len(current) + len(segment) > self.chunk_char_limit and current:
+                chunks.append(current.strip())
+                current = segment
+            else:
+                current += segment
+
+        if current.strip():
+            chunks.append(current.strip())
+
+        return chunks, speaker_map
+
 
     def set_speaker_seeds(self, job_id: str, seeds: Dict[str, int]):
         if self.use_redis:
@@ -128,6 +144,7 @@ class SimpleJobManager:
 
 # Initialize job manager
 job_manager = SimpleJobManager()
+
 
 # Initialize Dia directly
 class DiaTTS:
@@ -202,21 +219,52 @@ class DiaTTS:
             tag = speaker_map[key]
             text += f"{tag} {entry.text} "
         return text.strip()
-    
+
+    def format_chunks(self, dialogue: List[DialogueEntry], max_chars: int = 1200) -> (List[str], Dict[str, str]):
+        """Return formatted text chunks and speaker mapping."""
+        speaker_map: Dict[str, str] = {}
+        speaker_idx = 1
+        chunks: List[str] = []
+        current = ""
+        for entry in dialogue:
+            key = entry.speaker.lower()
+            if key not in speaker_map:
+                speaker_map[key] = f"[S{speaker_idx}]"
+                speaker_idx += 1
+            tag = speaker_map[key]
+            segment = f"{tag} {entry.text} "
+            if len(current) + len(segment) > max_chars and current:
+                chunks.append(current.strip())
+                current = segment
+            else:
+                current += segment
+        if current:
+            chunks.append(current.strip())
+        return chunks, speaker_map
+
     def generate_speech(self, text, speaker_seeds: Optional[Dict[str, int]] = None):
         """Generate speech from input text using optional speaker seeds."""
+
         if not self.is_initialized or self.model is None:
             raise RuntimeError("Dia TTS engine is not initialized")
-        
+
         logger.info(f"Generating speech: {text[:50]}...")
         try:
             import torch
             import soundfile as sf
             import io
-            
+
+
+            if speaker_seeds:
+                combined_seed = sum(speaker_seeds.values()) % (2**32 - 1)
+                torch.manual_seed(combined_seed)
+                random.seed(combined_seed)
+
+
             with torch.no_grad():
                 if speaker_seeds and "speaker_seeds" in self.model.generate.__code__.co_varnames:
                     output = self.model.generate(text, speaker_seeds=list(speaker_seeds.values()))
+
                 else:
                     if speaker_seeds:
                         seed = sum(speaker_seeds.values()) % (2**32 - 1)
@@ -226,6 +274,7 @@ class DiaTTS:
                             np.random.seed(seed)
                         except Exception:
                             pass
+
                     output = self.model.generate(text)
             
             # Get the sample rate, or use default
@@ -244,6 +293,7 @@ class DiaTTS:
 
 
 def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = 4000) -> List[List[DialogueEntry]]:
+
     """Split dialogue into chunks under a character limit."""
     chunks: List[List[DialogueEntry]] = []
     current: List[DialogueEntry] = []
@@ -259,6 +309,7 @@ def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = 4000) -> List
             length += approx
     if current:
         chunks.append(current)
+
     return chunks
 
 # Triton TTS client
@@ -282,7 +333,7 @@ class TritonTTSClient:
             text += f"{tag} {entry.text} "
         return text.strip()
     
-    async def generate_speech(self, input_text: str) -> bytes:
+    async def generate_speech(self, input_text: str, speaker_seeds: Optional[Dict[str, int]] = None) -> bytes:
         """Generate speech using Triton inference server."""
         logger.info(f"Sending request to Triton server: {self.url}")
         payload = {
@@ -383,8 +434,11 @@ async def process_job(job_id: str, request: TTSRequest):
     """Process a TTS job."""
     try:
         job_manager.create_job(job_id)
-        job_manager.update_status(job_id, JobStatus.RUNNING, "Processing TTS request")
+
+        job_manager.update_status(job_id, JobStatus.PROCESSING, "Processing TTS request")
+
         
+
         seeds = job_manager.get_speaker_seeds(job_id)
         if seeds is None:
             seeds = {"speaker-1": random.randint(0, 2**32 - 1), "speaker-2": random.randint(0, 2**32 - 1)}
@@ -393,9 +447,11 @@ async def process_job(job_id: str, request: TTSRequest):
         chunks = chunk_dialogue(request.dialogue)
         audio_chunks: List[bytes] = []
 
+
         if primary_tts_client:
             logger.info("Using Triton for TTS generation")
             client_type = "Triton"
+
             for idx, chunk in enumerate(chunks):
                 formatted_text = primary_tts_client.format_input(chunk)
                 try:
@@ -424,11 +480,13 @@ async def process_job(job_id: str, request: TTSRequest):
 
         audio_data = b"".join(audio_chunks)
         job_manager.clear_speaker_seeds(job_id)
+
         
         # Save the result
         logger.info(f"Audio generated successfully using {client_type}")
         job_manager.set_result(job_id, audio_data)
         job_manager.update_status(job_id, JobStatus.COMPLETED, "TTS complete")
+        job_manager.clear_job(job_id)
     
     except Exception as e:
         logger.error(f"Job {job_id} failed: {e}")
@@ -437,10 +495,10 @@ async def process_job(job_id: str, request: TTSRequest):
 @app.get("/status/{job_id}")
 async def get_status(job_id: str):
     """Get the status of a TTS job."""
-    status = job_manager.get_status(job_id)
-    if not status:
+    try:
+        return job_manager.get_status(job_id)
+    except ValueError:
         raise HTTPException(404, "Job not found")
-    return status
 
 @app.get("/output/{job_id}")
 async def get_output(job_id: str):

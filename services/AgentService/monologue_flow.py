@@ -11,7 +11,10 @@ from shared.pdf_types import PDFMetadata  # PDF document metadata and content
 from shared.llmmanager import LLMManager  # LLM interaction management
 from shared.job import JobStatusManager  # Background job status tracking
 from typing import List, Dict  # Type hints
-import ujson as json  # Fast JSON processing
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 import logging  # Logging utilities
 from shared.prompt_tracker import PromptTracker  # Tracks prompts sent to LLM
 from monologue_prompts import FinancialSummaryPrompts  # Prompt templates

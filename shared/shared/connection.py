@@ -1,7 +1,10 @@
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, Set
 import redis
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 import logging
 import time
 import asyncio
@@ -124,9 +127,10 @@ class ConnectionManager:
         Async task that processes queued messages and broadcasts them to clients.
         
         Continuously checks the message queue and broadcasts valid messages
-        to all connected WebSocket clients for the relevant job ID.
+        to all connected WebSocket clients for the relevant job ID. The loop
+        exits when ``should_stop`` is set to ``True``.
         """
-        while True:
+        while not self.should_stop:
             try:
                 # Check queue in a non-blocking way
                 while not self.message_queue.empty():
