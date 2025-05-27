@@ -2,31 +2,34 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[16:48:37] Submitting PDFs for processing...
+[16:25:28] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[16:48:37] Job ID received: fc8fe229-0c6e-46ea-bb22-47982b00c7b6
-[16:48:37] Connected to status WebSocket
-[16:48:37] Sent ready acknowledgment
-[16:48:38] pdf: pending - Job created
-[16:48:38] pdf: processing - Processing 1 PDFs
-[16:49:48] pdf: completed - All PDFs processed successfully
-[16:49:48] agent: pending - Job created
-[16:49:48] agent: processing - Initializing processing
-[16:49:48] agent: processing - Summarizing 1 PDFs
-[16:49:58] agent: processing - Generating initial outline
-[16:50:04] agent: processing - Converting raw outline to structured format
-[16:50:17] agent: processing - Processing segment 1/4: Introduction
-[16:50:17] agent: processing - Processing segment 2/4: Key Risks and Concerns
-[16:50:17] agent: processing - Processing segment 3/4: Investment Disclosure and Guidelines
-[16:50:17] agent: processing - Processing segment 4/4: Conclusion
-[16:50:42] agent: processing - Generating dialogue
-[16:50:42] agent: processing - Converting segment 1/4 to dialogue
-[16:50:42] agent: processing - Converting segment 2/4 to dialogue
-[16:50:42] agent: processing - Converting segment 3/4 to dialogue
-[16:50:42] agent: processing - Converting segment 4/4 to dialogue
-[16:51:10] agent: processing - Combining dialogue segments
-[16:51:10] agent: processing - Combining segment 2/4 with existing dialogue
-[16:51:24] agent: processing - Combining segment 3/4 with existing dialogue
-[16:51:37] agent: processing - Combining segment 4/4 with existing dialogue
-[16:51:51] agent: processing - Formatting final conversation
-[16:52:12] agent: completed - Transcription completed successfully
+[16:25:28] Job ID received: c1fadfa9-21d3-4bd3-8c07-e1c3b8ddbc72
+[16:25:28] Connected to status WebSocket
+[16:25:28] Sent ready acknowledgment
+[16:25:28] pdf: pending - Job created
+[16:25:28] pdf: processing - Processing 1 PDFs
+[16:27:04] pdf: completed - All PDFs processed successfully
+[16:27:04] agent: pending - Job created
+[16:27:04] agent: processing - Initializing processing
+[16:27:04] agent: processing - Summarizing 1 PDFs
+[16:27:37] agent: processing - Generating initial outline
+[16:27:43] agent: processing - Converting raw outline to structured format
+[16:27:52] agent: processing - Processing segment 1/5: Intro (0:00 - 0:05)
+[16:27:52] agent: processing - Processing segment 2/5: Section 1: Regulatory Framework (0:06 - 0:30)
+[16:27:52] agent: processing - Processing segment 3/5: Section 2: Research Methodology (0:31 - 0:55)
+[16:27:52] agent: processing - Processing segment 4/5: Section 3: Important Disclaimers (0:56 - 1:20)
+[16:27:52] agent: processing - Processing segment 5/5: Section 4: Additional Insights (1:21 - 2:00)
+[16:28:26] agent: processing - Generating dialogue
+[16:28:26] agent: processing - Converting segment 1/5 to dialogue
+[16:28:26] agent: processing - Converting segment 2/5 to dialogue
+[16:28:26] agent: processing - Converting segment 3/5 to dialogue
+[16:28:26] agent: processing - Converting segment 4/5 to dialogue
+[16:28:26] agent: processing - Converting segment 5/5 to dialogue
+[16:29:02] agent: processing - Combining dialogue segments
+[16:29:02] agent: processing - Combining segment 2/5 with existing dialogue
+[16:29:13] agent: processing - Combining segment 3/5 with existing dialogue
+[16:29:27] agent: processing - Combining segment 4/5 with existing dialogue
+[16:29:41] agent: processing - Combining segment 5/5 with existing dialogue
+[16:29:55] agent: processing - Formatting final conversation
+[16:30:15] agent: completed - Transcription completed successfully
