@@ -12,9 +12,11 @@ from shared.llmmanager import LLMManager  # LLM interaction management
 from shared.job import JobStatusManager  # Background job status tracking
 from typing import List, Dict  # Type hints
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json  # Fast JSON processing
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 import logging  # Logging utilities
 from shared.prompt_tracker import PromptTracker  # Tracks prompts sent to LLM
 from monologue_prompts import FinancialSummaryPrompts  # Prompt templates

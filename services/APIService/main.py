@@ -49,9 +49,11 @@ import redis
 import requests
 import httpx
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 import uuid
 import os
 import logging

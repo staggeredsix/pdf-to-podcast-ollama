@@ -11,7 +11,6 @@ import redis
 import random
 import requests
 import json
-
 import traceback
 import time
 import random
@@ -191,9 +190,12 @@ class DiaTTS:
         try:
             logger.info("Trying to install Dia package")
             subprocess.check_call([
-                sys.executable, "-m", "pip", "install", 
-                "git+https://github.com/nari-labs/dia.git", 
-                "--no-deps"
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "git+https://github.com/nari-labs/dia.git",
+                "--no-deps",
             ])
             
             # Try importing again after installation

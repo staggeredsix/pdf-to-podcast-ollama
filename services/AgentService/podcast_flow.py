@@ -12,9 +12,11 @@ from shared.llmmanager import LLMManager
 from shared.job import JobStatusManager
 from typing import List, Dict, Any, Coroutine
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 import logging
 from shared.prompt_tracker import PromptTracker
 from podcast_prompts import PodcastPrompts

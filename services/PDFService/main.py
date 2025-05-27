@@ -8,9 +8,11 @@ import os
 import logging
 import asyncio
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 from typing import List
 from shared.pdf_types import PDFConversionResult, ConversionStatus, PDFMetadata
 from shared.api_types import ServiceType, JobStatus, StatusResponse

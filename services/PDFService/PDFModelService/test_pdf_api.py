@@ -1,9 +1,11 @@
 import requests
 import sys
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 import time
 from pathlib import Path
 

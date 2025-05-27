@@ -15,9 +15,11 @@
 
 import io
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 import base64
 from minio import Minio
 from minio.error import S3Error

@@ -3,9 +3,11 @@ from shared.otel import OpenTelemetryInstrumentation
 import redis
 import time
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 import threading
 from typing import Dict, Optional
 

@@ -1,9 +1,11 @@
 from typing import List, Dict, Any, Optional, Union
 import logging
 try:
-    import ujson as json  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - fallback
-    import json  # type: ignore
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 from shared.otel import OpenTelemetryInstrumentation
 from opentelemetry.trace.status import StatusCode
 from pathlib import Path
@@ -389,7 +391,9 @@ class LLMManager:
                                             parsed_json = self._clean_and_parse_json(match)
                                             if '$defs' not in parsed_json and not ('type' in parsed_json and 'properties' in parsed_json):
                                                 return parsed_json
-                                        except Exception:
+
+                                        except (json.JSONDecodeError, ValueError):
+
                                             continue
                                     raise ValueError(f"Could not parse any valid JSON from response: {str(e)}")
                             else:
