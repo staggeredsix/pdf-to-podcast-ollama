@@ -32,7 +32,10 @@ from shared.llmmanager import LLMManager
 from shared.job import JobStatusManager
 from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
 from opentelemetry.trace.status import StatusCode
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 import os
 import logging
 from shared.prompt_tracker import PromptTracker
