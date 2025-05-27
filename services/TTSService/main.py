@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from typing import List, Dict, Optional
 
+from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
 import redis
 import random
 import requests
@@ -55,7 +56,8 @@ app = FastAPI(title="Dia TTS Service")
 # Set up OpenTelemetry instrumentation
 telemetry = OpenTelemetryInstrumentation()
 config = OpenTelemetryConfig(
-    service_name="tts-service",
+    service_name="dia-tts-service",
+
     otlp_endpoint=os.getenv("OTLP_ENDPOINT", "http://jaeger:4317"),
     enable_redis=True,
     enable_requests=True,
