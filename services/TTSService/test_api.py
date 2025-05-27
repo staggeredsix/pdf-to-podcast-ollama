@@ -1,8 +1,10 @@
 import requests
 try:
+
     import ujson as json
 except Exception:  # pragma: no cover - ujson might not be installed
     import json
+
 import os
 import time
 from fastapi import HTTPException

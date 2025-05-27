@@ -2,14 +2,38 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[10:46:10] Submitting PDFs for processing...
+[19:28:56] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[10:46:10] Job ID received: 6a8ac048-9937-448e-9bdf-3cb8c4097df7
-[10:46:10] Connected to status WebSocket
-[10:46:10] Sent ready acknowledgment
-[10:46:10] pdf: pending - Job created
-[10:46:10] pdf: processing - Processing 1 PDFs
-[10:46:53] pdf: completed - All PDFs processed successfully
-[10:46:53] agent: pending - Job created
-[10:46:53] agent: processing - Initializing processing
-[10:46:53] agent: processing - Summarizing 1 PDFs
+[19:28:56] Job ID received: 3b773b6f-4cac-4008-8151-50591996d9c3
+[19:28:56] Connected to status WebSocket
+[19:28:56] Sent ready acknowledgment
+[19:28:56] pdf: pending - Job created
+[19:28:56] pdf: processing - Processing 1 PDFs
+[19:32:01] pdf: completed - All PDFs processed successfully
+[19:32:01] agent: pending - Job created
+[19:32:01] agent: processing - Initializing processing
+[19:32:01] agent: processing - Summarizing 1 PDFs
+[19:32:08] agent: processing - Generating initial outline
+[19:32:15] agent: processing - Converting raw outline to structured format
+[19:32:23] agent: processing - Processing segment 1/5: Introduction
+[19:32:23] agent: processing - Processing segment 2/5: Exponential Growth of Compute Demand
+[19:32:23] agent: processing - Processing segment 3/5: NVIDIA's Leadership in Inference Platform
+[19:32:23] agent: processing - Processing segment 4/5: Enterprise AI Adoption and Opportunities
+[19:32:23] agent: processing - Processing segment 5/5: Conclusion and Future Outlook
+[19:32:53] agent: processing - Generating dialogue
+[19:32:53] agent: processing - Converting segment 1/5 to dialogue
+[19:32:53] agent: processing - Converting segment 2/5 to dialogue
+[19:32:53] agent: processing - Converting segment 3/5 to dialogue
+[19:32:53] agent: processing - Converting segment 4/5 to dialogue
+[19:32:53] agent: processing - Converting segment 5/5 to dialogue
+[19:33:34] agent: processing - Combining dialogue segments
+[19:33:34] agent: processing - Combining segment 2/5 with existing dialogue
+[19:33:48] agent: processing - Combining segment 3/5 with existing dialogue
+[19:34:01] agent: processing - Combining segment 4/5 with existing dialogue
+[19:34:15] agent: processing - Combining segment 5/5 with existing dialogue
+[19:34:29] agent: processing - Formatting final conversation
+[19:34:48] agent: completed - Transcription completed successfully
+[19:34:48] tts: pending - Job created
+[19:34:48] tts: processing - Processing TTS request
+[19:34:48] tts: failed - 'JobStatusManager' object has no attribute 'get_speaker_seeds'
+[19:34:48] Job failed in tts: 'JobStatusManager' object has no attribute 'get_speaker_seeds'

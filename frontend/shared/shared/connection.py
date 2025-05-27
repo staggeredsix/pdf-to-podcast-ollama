@@ -17,9 +17,11 @@ from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, Set
 import redis
 try:
+
     import ujson as json
 except Exception:  # pragma: no cover - ujson might not be installed
     import json
+
 import logging
 import time
 import asyncio
