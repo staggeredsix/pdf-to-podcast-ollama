@@ -5,7 +5,10 @@ from the PDF-to-Podcast API service, including their metadata and transcription 
 """
 
 import requests
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 from datetime import datetime
 
 

@@ -7,7 +7,10 @@ and prompt history retrieval endpoints of the PDF-to-Podcast API service.
 import requests
 import os
 from datetime import datetime
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 
 # Set your job_id here
 JOB_ID = "1730947535"

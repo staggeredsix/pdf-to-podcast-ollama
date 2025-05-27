@@ -7,7 +7,10 @@ invalid file types and malformed transcription parameters.
 import os
 import requests
 from requests import Response
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 from datetime import datetime
 
 

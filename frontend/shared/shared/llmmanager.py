@@ -16,7 +16,13 @@
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from typing import List, Dict, Any, Optional, Union
 import logging
-import ujson as json
+try:
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
+
 from shared.otel import OpenTelemetryInstrumentation
 from opentelemetry.trace.status import StatusCode
 from pathlib import Path

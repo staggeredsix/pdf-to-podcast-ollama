@@ -48,7 +48,12 @@ from pydantic import ValidationError
 import redis
 import requests
 import httpx
-import ujson as json
+try:
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 import uuid
 import os
 import logging

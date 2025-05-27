@@ -1,6 +1,11 @@
 from typing import List, Dict, Any, Optional, Union
 import logging
-import ujson as json
+try:
+
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
+
 from shared.otel import OpenTelemetryInstrumentation
 from opentelemetry.trace.status import StatusCode
 from pathlib import Path
@@ -141,11 +146,16 @@ class LLMManager:
         
         full_prompt = "\n".join(prompt_parts) + "\nAssistant:"
         
-        # Truncate prompt if too long (approximate token counting - 1 token ≈ 4 characters)
+        # Truncate prompt if too long (approximate token counting - 1 token â 4 characters)
         max_chars = 20000  # ~5000 tokens, leaving room for response
         if len(full_prompt) > max_chars:
-            logger.warning(f"Prompt too long ({len(full_prompt)} chars), truncating to {max_chars} chars")
+
+            removed_chars = len(full_prompt) - max_chars
+            logger.warning(
+                f"Prompt too long ({len(full_prompt)} chars), truncating to {max_chars} chars (removing {removed_chars} chars)"
+            )
             # Try to keep the end of the prompt which is usually most important
+
             full_prompt = "..." + full_prompt[-max_chars:]
         
         return full_prompt
@@ -381,7 +391,9 @@ class LLMManager:
                                             parsed_json = self._clean_and_parse_json(match)
                                             if '$defs' not in parsed_json and not ('type' in parsed_json and 'properties' in parsed_json):
                                                 return parsed_json
-                                        except:
+
+                                        except (json.JSONDecodeError, ValueError):
+
                                             continue
                                     raise ValueError(f"Could not parse any valid JSON from response: {str(e)}")
                             else:
@@ -425,6 +437,9 @@ class LLMManager:
 
     def _clean_and_parse_json(self, content: str) -> dict:
         """Clean and parse JSON response from Ollama."""
+        # Explicitly import ujson here to avoid any local scope issues that could
+        # lead to "local variable 'json' referenced before assignment" errors
+        import ujson as json
         # Remove any leading/trailing whitespace
         content = content.strip()
         
@@ -437,10 +452,31 @@ class LLMManager:
         if json_match:
             content = json_match.group()
         
+        # Special handling for podcast JSON where the dialogue field is missing
+        if '"scratchpad"' in content and re.search(r'"scratchpad"\s*:\s*"[^"]*"[^{]*\[\s*(?:INTRO|MUSIC|HOST|NARRATOR|BOB|KATE)', content, re.IGNORECASE):
+            try:
+                # Extract scratchpad
+                scratchpad_match = re.search(r'"scratchpad"\s*:\s*"([^"]*)"', content)
+                scratchpad = scratchpad_match.group(1) if scratchpad_match else ""
+                
+                # Extract the dialogue content (everything after scratchpad)
+                dialogue_text = re.sub(r'^.*?"scratchpad"\s*:\s*"[^"]*"[^[]*', '', content, flags=re.DOTALL)
+                
+                # Reconstruct proper JSON
+                fixed_json = '{' + f'"scratchpad": "{scratchpad}", "dialogue": {dialogue_text}'
+                
+                # Try to parse it
+                import json
+                return json.loads(fixed_json)
+            except Exception as e:
+                logger.warning(f"Special handling for podcast JSON failed: {e}")
+        
         # Common JSON fixes
         content = content.replace('\n', ' ')  # Remove newlines
         content = re.sub(r',\s*}', '}', content)  # Remove trailing commas
         content = re.sub(r',\s*]', ']', content)  # Remove trailing commas in arrays
+        content = re.sub(r'"\s+("|\[)', '": \1', content)  # Add missing colons
+        content = re.sub(r'([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', content)  # Fix missing quotes
         
         # Try to parse the JSON first
         try:
@@ -453,7 +489,6 @@ class LLMManager:
             # Fix escaped quotes in string values but preserve JSON structure
             # This regex finds string values and properly escapes quotes within them
             def fix_quotes_in_strings(match):
-                full_match = match.group(0)
                 key_part = match.group(1)  # "key":
                 string_content = match.group(2)  # the content between quotes
                 
@@ -472,9 +507,46 @@ class LLMManager:
                 parsed = json.loads(content)
                 return parsed
             except json.JSONDecodeError as e2:
+                # Try to extract a balanced JSON block if available
+                extracted = self._extract_json_block(content)
+                if extracted:
+                    return json.loads(extracted)
                 logger.error(f"JSON parsing failed even after cleaning. Error: {e2}")
                 logger.error(f"Content: {content[:500]}...")
+                
+                # Last resort for podcast content - extract anything that looks like a dialogue
+                try:
+                    if "scratchpad" in content or "dialogue" in content:
+                        dialogue_content = []
+                        text_chunks = re.findall(r'(?:HOST|GUEST|NARRATOR|BOB|KATE):\s*([^\n]+)', content)
+                        if text_chunks:
+                            for i, chunk in enumerate(text_chunks):
+                                speaker = "speaker-1" if i % 2 == 0 else "speaker-2"
+                                dialogue_content.append({"text": chunk.strip(), "speaker": speaker})
+                            
+                            return {
+                                "scratchpad": "",
+                                "dialogue": dialogue_content
+                            }
+                except Exception:
+                    pass
+                    
                 raise ValueError(f"Could not parse JSON: {e2}")
+
+    def _extract_json_block(self, text: str) -> Optional[str]:
+        """Return the first balanced JSON object found in text."""
+        start = text.find('{')
+        while start != -1:
+            depth = 0
+            for idx in range(start, len(text)):
+                if text[idx] == '{':
+                    depth += 1
+                elif text[idx] == '}':
+                    depth -= 1
+                    if depth == 0:
+                        return text[start:idx + 1]
+            start = text.find('{', start + 1)
+        return None
 
     async def query_async(
         self,
