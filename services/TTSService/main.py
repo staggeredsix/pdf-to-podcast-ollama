@@ -74,7 +74,7 @@ class DialogueFormatter:
     def __init__(self, chunk_char_limit: int = 1200):
         self.chunk_char_limit = chunk_char_limit
 
-    def format_chunks(self, dialogue: List[DialogueEntry]) -> Tuple[List[str], Dict[str, str]]:
+    def format_chunks(self, dialogue: List[DialogueEntry]) -> tuple[List[str], Dict[str, str]]:
         """Return chunks of formatted dialogue and the speaker map."""
         speaker_map: Dict[str, str] = {}
         speaker_idx = 1
