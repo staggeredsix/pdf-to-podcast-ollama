@@ -11,7 +11,10 @@ from shared.api_types import JobStatus, TranscriptionRequest
 from shared.llmmanager import LLMManager
 from shared.job import JobStatusManager
 from typing import List, Dict, Any, Coroutine
-import ujson as json
+try:
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
 import logging
 from shared.prompt_tracker import PromptTracker
 from podcast_prompts import PodcastPrompts

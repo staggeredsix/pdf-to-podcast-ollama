@@ -8,13 +8,23 @@ from typing import List, Dict, Optional
 import redis
 import requests
 import json
-import tempfile
 import traceback
 import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Ensure potential local Dia paths are available before attempting import
+POTENTIAL_DIA_PATHS = [
+    "/app/dia_model",
+    "/app/dia_hf_repo",
+    "/app/dia_github",
+    "/app/dia",
+]
+for _p in POTENTIAL_DIA_PATHS:
+    if os.path.exists(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
 
 # Service configuration
 TRITON_HOST = os.getenv("TRITON_HOST", "triton")
@@ -126,7 +136,6 @@ class DiaTTS:
     def _try_import_dia(self):
         try:
             logger.info("Trying to import Dia model")
-            import torch
             from dia.model import Dia
             
             logger.info("Successfully imported Dia model, initializing")
@@ -143,13 +152,15 @@ class DiaTTS:
         try:
             logger.info("Trying to install Dia package")
             subprocess.check_call([
-                sys.executable, "-m", "pip", "install", 
-                "git+https://github.com/nari-labs/dia.git", 
-                "--no-deps"
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "git+https://github.com/nari-labs/dia.git",
+                "--no-deps",
             ])
             
             # Try importing again after installation
-            import torch
             from dia.model import Dia
             
             logger.info("Successfully installed and imported Dia model, initializing")
@@ -253,6 +264,14 @@ class TritonTTSClient:
 # Initialize TTS engine and clients
 dia_tts = DiaTTS()
 local_tts_available = dia_tts.is_initialized
+
+# Initialize Dia when the application starts to avoid first-request delays
+@app.on_event("startup")
+async def startup_event():
+    if not dia_tts.is_initialized:
+        logger.info("Startup: initializing Dia TTS engine")
+        dia_tts.initialize()
+        logger.info(f"Dia initialization status: {dia_tts.is_initialized}")
 
 # Initialize Triton client
 primary_tts_client = None

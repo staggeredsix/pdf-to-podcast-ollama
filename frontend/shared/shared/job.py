@@ -17,7 +17,10 @@ from shared.api_types import ServiceType
 from shared.otel import OpenTelemetryInstrumentation
 import redis
 import time
-import ujson as json
+try:
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
 import threading
 
 

@@ -1,6 +1,9 @@
 from typing import List, Dict, Any, Optional, Union
 import logging
-import ujson as json
+try:
+    import ujson as json
+except Exception:  # pragma: no cover - ujson might not be installed
+    import json
 from shared.otel import OpenTelemetryInstrumentation
 from opentelemetry.trace.status import StatusCode
 from pathlib import Path
@@ -381,7 +384,7 @@ class LLMManager:
                                             parsed_json = self._clean_and_parse_json(match)
                                             if '$defs' not in parsed_json and not ('type' in parsed_json and 'properties' in parsed_json):
                                                 return parsed_json
-                                        except:
+                                        except (json.JSONDecodeError, ValueError):
                                             continue
                                     raise ValueError(f"Could not parse any valid JSON from response: {str(e)}")
                             else:
@@ -453,7 +456,6 @@ class LLMManager:
             # Fix escaped quotes in string values but preserve JSON structure
             # This regex finds string values and properly escapes quotes within them
             def fix_quotes_in_strings(match):
-                full_match = match.group(0)
                 key_part = match.group(1)  # "key":
                 string_content = match.group(2)  # the content between quotes
                 
