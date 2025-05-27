@@ -4,8 +4,11 @@ import sys
 import logging
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
-from typing import List, Dict, Optional, Tuple
-import redis
+
+from typing import List, Dict, Optional
+from shared.job import JobStatusManager
+from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
+from shared.api_types import ServiceType, JobStatus
 import requests
 import json
 
@@ -32,15 +35,7 @@ for _p in POTENTIAL_DIA_PATHS:
 TRITON_HOST = os.getenv("TRITON_HOST", "triton")
 TRITON_PORT = os.getenv("TRITON_PORT", "8000")
 TRITON_URL = os.getenv("TRITON_URL", f"http://{TRITON_HOST}:{TRITON_PORT}")
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 TRITON_REQUEST_TIMEOUT = int(os.getenv("TRITON_REQUEST_TIMEOUT", "5"))
-
-# Status constants
-class JobStatus:
-    CREATED = "created"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
 
 # Model definitions
 class DialogueEntry(BaseModel):
@@ -57,87 +52,20 @@ class TTSRequest(BaseModel):
 # Initialize FastAPI app
 app = FastAPI(title="Dia TTS Service")
 
+
+# Set up OpenTelemetry instrumentation
+telemetry = OpenTelemetryInstrumentation()
+config = OpenTelemetryConfig(
+    service_name="tts-service",
+    otlp_endpoint=os.getenv("OTLP_ENDPOINT", "http://jaeger:4317"),
+    enable_redis=True,
+    enable_requests=True,
+)
+telemetry.initialize(config, app)
+
 # Job manager for tracking TTS jobs
-class SimpleJobManager:
-    def __init__(self):
-        self.jobs = {}
-        self.results = {}
+job_manager = JobStatusManager(ServiceType.TTS, telemetry=telemetry)
 
-        self.seeds = {}
-
-        try:
-            self.redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=False)
-            self.redis_client.ping()
-            self.use_redis = True
-            logger.info("Connected to Redis")
-        except Exception as e:
-            self.redis_client = None
-            self.use_redis = False
-            logger.info(f"Redis not available, using in-memory storage: {e}")
-
-    def create_job(self, job_id):
-        data = {"status": "created", "message": "Job created"}
-        if self.use_redis:
-            self.redis_client.hset(f"job:{job_id}", mapping=data)
-        else:
-            self.jobs[job_id] = data
-
-    def update_status(self, job_id, status, message=""):
-        data = {"status": status, "message": message}
-        if self.use_redis:
-            self.redis_client.hset(f"job:{job_id}", mapping=data)
-        else:
-            self.jobs[job_id] = data
-        logger.info(f"Job {job_id}: {status} - {message}")
-
-    def get_status(self, job_id):
-        if self.use_redis:
-            data = self.redis_client.hgetall(f"job:{job_id}")
-            return {k.decode(): v.decode() for k, v in data.items()} if data else None
-        else:
-            return self.jobs.get(job_id)
-
-    def set_result(self, job_id, result):
-        if self.use_redis:
-            self.redis_client.set(f"result:{job_id}", result)
-        else:
-            self.results[job_id] = result
-
-    def set_speaker_seeds(self, job_id: str, seeds: Dict[str, int]):
-        if self.use_redis:
-            self.redis_client.hset(f"seeds:{job_id}", mapping={k: str(v) for k, v in seeds.items()})
-        else:
-
-            self.seeds[job_id] = seeds
-
-
-    def get_speaker_seeds(self, job_id: str) -> Optional[Dict[str, int]]:
-        if self.use_redis:
-            data = self.redis_client.hgetall(f"seeds:{job_id}")
-
-            return {k.decode(): int(v.decode()) for k, v in data.items()} if data else None
-        else:
-            return self.seeds.get(job_id)
-
-
-    def get_result(self, job_id):
-        if self.use_redis:
-            return self.redis_client.get(f"result:{job_id}")
-        else:
-            return self.results.get(job_id)
-
-    def clear_job(self, job_id: str):
-        if self.use_redis:
-            self.redis_client.delete(f"seeds:{job_id}")
-            self.redis_client.delete(f"result:{job_id}")
-            self.redis_client.delete(f"job:{job_id}")
-        else:
-            self.seeds.pop(job_id, None)
-            self.results.pop(job_id, None)
-            self.jobs.pop(job_id, None)
-
-# Initialize job manager
-job_manager = SimpleJobManager()
 
 
 class DialogueFormatter:
@@ -455,7 +383,8 @@ async def process_job(job_id: str, request: TTSRequest):
     """Process a TTS job."""
     try:
         job_manager.create_job(job_id)
-        job_manager.update_status(job_id, JobStatus.RUNNING, "Processing TTS request")
+
+        job_manager.update_status(job_id, JobStatus.PROCESSING, "Processing TTS request")
 
         
         formatter = DialogueFormatter()
@@ -473,25 +402,27 @@ async def process_job(job_id: str, request: TTSRequest):
             logger.info("Using Triton for TTS generation")
             client_type = "Triton"
 
-            for chunk in chunks:
-                job_manager.update_status(job_id, JobStatus.RUNNING, "Generating speech using Triton")
-                try:
-                    audio_chunk = await primary_tts_client.generate_speech(chunk, speaker_seeds=seeds)
-                except Exception as e:
-                    logger.warning(f"Triton TTS generation failed: {e}, trying local fallback")
-                    if local_tts_available:
-                        client_type = "Local Dia"
-                        audio_chunk = dia_tts.generate_speech(chunk, speaker_seeds=seeds)
-                    else:
-                        raise
-                audio_parts.append(audio_chunk)
+            formatted_text = primary_tts_client.format_input(request.dialogue)
+            
+            try:
+                job_manager.update_status(job_id, JobStatus.PROCESSING, "Generating speech using Triton")
+                audio_data = await primary_tts_client.generate_speech(formatted_text)
+            except Exception as e:
+                logger.warning(f"Triton TTS generation failed: {e}, trying local fallback")
+                if local_tts_available:
+                    client_type = "Local Dia"
+                    job_manager.update_status(job_id, JobStatus.PROCESSING, "Triton failed, using local Dia")
+                    formatted_text = dia_tts.format_input(request.dialogue)
+                    audio_data = dia_tts.generate_speech(formatted_text)
+                else:
+                    raise
         elif local_tts_available:
             logger.info("Using local Dia for TTS generation")
             client_type = "Local Dia"
-            job_manager.update_status(job_id, JobStatus.RUNNING, "Generating speech using local Dia")
-            for chunk in chunks:
-                audio_chunk = dia_tts.generate_speech(chunk, speaker_seeds=seeds)
-                audio_parts.append(audio_chunk)
+            job_manager.update_status(job_id, JobStatus.PROCESSING, "Generating speech using local Dia")
+            formatted_text = dia_tts.format_input(request.dialogue)
+            audio_data = dia_tts.generate_speech(formatted_text)
+
         else:
             raise RuntimeError("No TTS services available")
 
@@ -510,10 +441,10 @@ async def process_job(job_id: str, request: TTSRequest):
 @app.get("/status/{job_id}")
 async def get_status(job_id: str):
     """Get the status of a TTS job."""
-    status = job_manager.get_status(job_id)
-    if not status:
+    try:
+        return job_manager.get_status(job_id)
+    except ValueError:
         raise HTTPException(404, "Job not found")
-    return status
 
 @app.get("/output/{job_id}")
 async def get_output(job_id: str):
