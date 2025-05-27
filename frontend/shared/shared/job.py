@@ -22,6 +22,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - fallback
     import json  # type: ignore
 import threading
+from typing import Dict, Optional
 
 
 class JobStatusManager:
@@ -35,6 +36,7 @@ class JobStatusManager:
         self.redis = redis.Redis.from_url(redis_url, decode_responses=False)
         self.service_type = service_type
         self._lock = threading.Lock()
+        self._seeds = {}
 
     def create_job(self, job_id: str):
         with self.telemetry.tracer.start_as_current_span("job.create_job") as span:
@@ -89,6 +91,39 @@ class JobStatusManager:
             set_key = f"result:{job_id}:{str(self.service_type)}"
             span.set_attribute("set_key", set_key)
             self.redis.set(set_key, result, ex=ex)
+
+    def set_speaker_seeds(self, job_id: str, seeds: Dict[str, int]):
+        with self._lock:
+            self._seeds[job_id] = seeds
+            try:
+                self.redis.hset(
+                    f"seeds:{job_id}", mapping={k: str(v) for k, v in seeds.items()}
+                )
+            except Exception:
+                pass
+
+    def get_speaker_seeds(self, job_id: str) -> Optional[Dict[str, int]]:
+        with self._lock:
+            if job_id in self._seeds:
+                return self._seeds[job_id]
+        try:
+            data = self.redis.hgetall(f"seeds:{job_id}")
+            if data:
+                seeds = {k.decode(): int(v.decode()) for k, v in data.items()}
+                with self._lock:
+                    self._seeds[job_id] = seeds
+                return seeds
+        except Exception:
+            pass
+        return None
+
+    def clear_speaker_seeds(self, job_id: str):
+        with self._lock:
+            self._seeds.pop(job_id, None)
+        try:
+            self.redis.delete(f"seeds:{job_id}")
+        except Exception:
+            pass
 
     def get_result(self, job_id: str):
         with self.telemetry.tracer.start_as_current_span("job.get_result") as span:
