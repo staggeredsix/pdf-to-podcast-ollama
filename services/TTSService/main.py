@@ -76,9 +76,9 @@ class JobStatus(Enum):
 
 class SimpleJobManager:
     def __init__(self):
-        self.jobs: Dict[str, Dict[str, Any]] = {}
+        self.jobs: Dict[str, Dict[str, any]] = {}
     
-    def create_job(self, job_id: str, data: Any) -> Dict[str, Any]:
+    def create_job(self, job_id: str, data: any) -> Dict[str, any]:
         """Create a new job"""
         job = {
             'id': job_id,
@@ -102,11 +102,11 @@ class SimpleJobManager:
             self.jobs[job_id]['message'] = message
         self.jobs[job_id]['updated_at'] = datetime.now()
     
-    def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+    def get_job(self, job_id: str) -> Optional[Dict[str, any]]:
         """Get job by ID"""
         return self.jobs.get(job_id)
     
-    def get_all_jobs(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_jobs(self) -> Dict[str, Dict[str, any]]:
         """Get all jobs"""
         return self.jobs
     
@@ -117,7 +117,7 @@ class SimpleJobManager:
             return True
         return False
     
-    def set_result(self, job_id: str, result: Any) -> None:
+    def set_result(self, job_id: str, result: any) -> None:
         """Set the result of a job"""
         if job_id not in self.jobs:
             raise KeyError(f"Job {job_id} not found")
@@ -125,7 +125,7 @@ class SimpleJobManager:
         self.jobs[job_id]['result'] = result
         self.jobs[job_id]['updated_at'] = datetime.now()
     
-    def get_jobs_by_status(self, status: JobStatus) -> Dict[str, Dict[str, Any]]:
+    def get_jobs_by_status(self, status: JobStatus) -> Dict[str, Dict[str, any]]:
         """Get all jobs with a specific status"""
         return {job_id: job for job_id, job in self.jobs.items() if job['status'] == status}
     
