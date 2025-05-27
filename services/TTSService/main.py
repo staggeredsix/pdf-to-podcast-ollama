@@ -5,10 +5,11 @@ import logging
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
 from typing import List, Dict, Optional
-import redis
+from shared.job import JobStatusManager
+from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
+from shared.api_types import ServiceType, JobStatus
 import requests
 import json
-import tempfile
 import traceback
 import time
 
@@ -16,19 +17,22 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Ensure potential local Dia paths are available before attempting import
+POTENTIAL_DIA_PATHS = [
+    "/app/dia_model",
+    "/app/dia_hf_repo",
+    "/app/dia_github",
+    "/app/dia",
+]
+for _p in POTENTIAL_DIA_PATHS:
+    if os.path.exists(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
+
 # Service configuration
 TRITON_HOST = os.getenv("TRITON_HOST", "triton")
 TRITON_PORT = os.getenv("TRITON_PORT", "8000")
 TRITON_URL = os.getenv("TRITON_URL", f"http://{TRITON_HOST}:{TRITON_PORT}")
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 TRITON_REQUEST_TIMEOUT = int(os.getenv("TRITON_REQUEST_TIMEOUT", "5"))
-
-# Status constants
-class JobStatus:
-    CREATED = "created"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
 
 # Model definitions
 class DialogueEntry(BaseModel):
@@ -45,57 +49,18 @@ class TTSRequest(BaseModel):
 # Initialize FastAPI app
 app = FastAPI(title="Dia TTS Service")
 
+# Set up OpenTelemetry instrumentation
+telemetry = OpenTelemetryInstrumentation()
+config = OpenTelemetryConfig(
+    service_name="tts-service",
+    otlp_endpoint=os.getenv("OTLP_ENDPOINT", "http://jaeger:4317"),
+    enable_redis=True,
+    enable_requests=True,
+)
+telemetry.initialize(config, app)
+
 # Job manager for tracking TTS jobs
-class SimpleJobManager:
-    def __init__(self):
-        self.jobs = {}
-        self.results = {}
-        try:
-            self.redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=False)
-            self.redis_client.ping()
-            self.use_redis = True
-            logger.info("Connected to Redis")
-        except Exception as e:
-            self.redis_client = None
-            self.use_redis = False
-            logger.info(f"Redis not available, using in-memory storage: {e}")
-
-    def create_job(self, job_id):
-        data = {"status": "created", "message": "Job created"}
-        if self.use_redis:
-            self.redis_client.hset(f"job:{job_id}", mapping=data)
-        else:
-            self.jobs[job_id] = data
-
-    def update_status(self, job_id, status, message=""):
-        data = {"status": status, "message": message}
-        if self.use_redis:
-            self.redis_client.hset(f"job:{job_id}", mapping=data)
-        else:
-            self.jobs[job_id] = data
-        logger.info(f"Job {job_id}: {status} - {message}")
-
-    def get_status(self, job_id):
-        if self.use_redis:
-            data = self.redis_client.hgetall(f"job:{job_id}")
-            return {k.decode(): v.decode() for k, v in data.items()} if data else None
-        else:
-            return self.jobs.get(job_id)
-
-    def set_result(self, job_id, result):
-        if self.use_redis:
-            self.redis_client.set(f"result:{job_id}", result)
-        else:
-            self.results[job_id] = result
-
-    def get_result(self, job_id):
-        if self.use_redis:
-            return self.redis_client.get(f"result:{job_id}")
-        else:
-            return self.results.get(job_id)
-
-# Initialize job manager
-job_manager = SimpleJobManager()
+job_manager = JobStatusManager(ServiceType.TTS, telemetry=telemetry)
 
 # Initialize Dia directly
 class DiaTTS:
@@ -126,7 +91,6 @@ class DiaTTS:
     def _try_import_dia(self):
         try:
             logger.info("Trying to import Dia model")
-            import torch
             from dia.model import Dia
             
             logger.info("Successfully imported Dia model, initializing")
@@ -149,7 +113,6 @@ class DiaTTS:
             ])
             
             # Try importing again after installation
-            import torch
             from dia.model import Dia
             
             logger.info("Successfully installed and imported Dia model, initializing")
@@ -254,6 +217,14 @@ class TritonTTSClient:
 dia_tts = DiaTTS()
 local_tts_available = dia_tts.is_initialized
 
+# Initialize Dia when the application starts to avoid first-request delays
+@app.on_event("startup")
+async def startup_event():
+    if not dia_tts.is_initialized:
+        logger.info("Startup: initializing Dia TTS engine")
+        dia_tts.initialize()
+        logger.info(f"Dia initialization status: {dia_tts.is_initialized}")
+
 # Initialize Triton client
 primary_tts_client = None
 try:
@@ -315,7 +286,7 @@ async def process_job(job_id: str, request: TTSRequest):
     """Process a TTS job."""
     try:
         job_manager.create_job(job_id)
-        job_manager.update_status(job_id, JobStatus.RUNNING, "Processing TTS request")
+        job_manager.update_status(job_id, JobStatus.PROCESSING, "Processing TTS request")
         
         # Format input text
         if primary_tts_client:
@@ -324,13 +295,13 @@ async def process_job(job_id: str, request: TTSRequest):
             formatted_text = primary_tts_client.format_input(request.dialogue)
             
             try:
-                job_manager.update_status(job_id, JobStatus.RUNNING, "Generating speech using Triton")
+                job_manager.update_status(job_id, JobStatus.PROCESSING, "Generating speech using Triton")
                 audio_data = await primary_tts_client.generate_speech(formatted_text)
             except Exception as e:
                 logger.warning(f"Triton TTS generation failed: {e}, trying local fallback")
                 if local_tts_available:
                     client_type = "Local Dia"
-                    job_manager.update_status(job_id, JobStatus.RUNNING, "Triton failed, using local Dia")
+                    job_manager.update_status(job_id, JobStatus.PROCESSING, "Triton failed, using local Dia")
                     formatted_text = dia_tts.format_input(request.dialogue)
                     audio_data = dia_tts.generate_speech(formatted_text)
                 else:
@@ -338,7 +309,7 @@ async def process_job(job_id: str, request: TTSRequest):
         elif local_tts_available:
             logger.info("Using local Dia for TTS generation")
             client_type = "Local Dia"
-            job_manager.update_status(job_id, JobStatus.RUNNING, "Generating speech using local Dia")
+            job_manager.update_status(job_id, JobStatus.PROCESSING, "Generating speech using local Dia")
             formatted_text = dia_tts.format_input(request.dialogue)
             audio_data = dia_tts.generate_speech(formatted_text)
         else:
@@ -356,10 +327,10 @@ async def process_job(job_id: str, request: TTSRequest):
 @app.get("/status/{job_id}")
 async def get_status(job_id: str):
     """Get the status of a TTS job."""
-    status = job_manager.get_status(job_id)
-    if not status:
+    try:
+        return job_manager.get_status(job_id)
+    except ValueError:
         raise HTTPException(404, "Job not found")
-    return status
 
 @app.get("/output/{job_id}")
 async def get_output(job_id: str):
