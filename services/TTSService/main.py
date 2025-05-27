@@ -482,10 +482,10 @@ async def generate_tts(request: TTSRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(process_job, job_id, request)
     return {"job_id": job_id}
 
-async def process_job(job_id: str, request: TTSRequest):
+async def process_job(job_id: str, job_data: dict, request: TTSRequest):
     """Process a TTS job."""
     try:
-        job_manager.create_job(job_id)
+        job_manager.create_job(job_id, job_data)
 
         job_manager.update_status(job_id, JobStatus.PROCESSING, "Processing TTS request")
 
@@ -541,8 +541,14 @@ async def process_job(job_id: str, request: TTSRequest):
         job_manager.clear_job(job_id)
     
     except Exception as e:
-        logger.error(f"Job {job_id} failed: {e}")
-        job_manager.update_status(job_id, JobStatus.FAILED, str(e))
+        logger.error(f"Job {job_id} failed: {str(e)}")
+        # Only update status if job exists
+        if job_manager.get_job(job_id):
+            job_manager.update_status(job_id, JobStatus.FAILED, str(e))
+        else:
+            # Create failed job record if it doesn't exist
+            job_manager.create_job(job_id, job_data)
+            job_manager.update_status(job_id, JobStatus.FAILED, str(e))
 
 @app.get("/status/{job_id}")
 async def get_status(job_id: str):
