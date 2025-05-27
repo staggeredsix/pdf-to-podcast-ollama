@@ -7,7 +7,10 @@ import tempfile
 import os
 import logging
 import asyncio
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 from typing import List
 from shared.pdf_types import PDFConversionResult, ConversionStatus, PDFMetadata
 from shared.api_types import ServiceType, JobStatus, StatusResponse

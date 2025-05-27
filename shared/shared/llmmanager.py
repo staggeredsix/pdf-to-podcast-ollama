@@ -1,6 +1,9 @@
 from typing import List, Dict, Any, Optional, Union
 import logging
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 from shared.otel import OpenTelemetryInstrumentation
 from opentelemetry.trace.status import StatusCode
 from pathlib import Path
@@ -144,7 +147,10 @@ class LLMManager:
         # Truncate prompt if too long (approximate token counting - 1 token ≈ 4 characters)
         max_chars = 20000  # ~5000 tokens, leaving room for response
         if len(full_prompt) > max_chars:
-            logger.warning(f"Prompt too long ({len(full_prompt)} chars), truncating to {max_chars} chars")
+            removed_chars = len(full_prompt) - max_chars
+            logger.warning(
+                f"Prompt too long ({len(full_prompt)} chars), truncating to {max_chars} chars (removing {removed_chars} chars)"
+            )
             # Try to keep the end of the prompt which is usually most important
             full_prompt = "..." + full_prompt[-max_chars:]
         

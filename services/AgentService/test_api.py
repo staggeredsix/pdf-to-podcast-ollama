@@ -6,7 +6,10 @@ verifying the full workflow from request submission to job completion.
 """
 
 import requests
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 import os
 import time
 from shared.api_types import TranscriptionRequest

@@ -1,7 +1,10 @@
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, Set
 import redis
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 import logging
 import time
 import asyncio

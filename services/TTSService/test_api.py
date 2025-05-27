@@ -1,5 +1,8 @@
 import requests
-import ujson as json
+try:
+    import ujson as json  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    import json  # type: ignore
 import os
 import time
 from fastapi import HTTPException
