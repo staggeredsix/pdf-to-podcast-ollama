@@ -8,8 +8,10 @@ from typing import List, Dict, Optional
 import redis
 import requests
 import json
+
 import traceback
 import time
+import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -60,7 +62,9 @@ class SimpleJobManager:
     def __init__(self):
         self.jobs = {}
         self.results = {}
+
         self.speaker_seeds = {}
+
         try:
             self.redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=False)
             self.redis_client.ping()
@@ -118,6 +122,7 @@ class SimpleJobManager:
             self.redis_client.delete(f"seeds:{job_id}")
         else:
             self.speaker_seeds.pop(job_id, None)
+
 
     def get_result(self, job_id):
         if self.use_redis:
@@ -224,16 +229,19 @@ class DiaTTS:
             chunks.append(current.strip())
         return chunks, speaker_map
     
+
     def generate_speech(self, text: str, speaker_seeds: Optional[Dict[str, int]] = None):
         """Generate speech from input text."""
+
         if not self.is_initialized or self.model is None:
             raise RuntimeError("Dia TTS engine is not initialized")
-        
+
         logger.info(f"Generating speech: {text[:50]}...")
         try:
             import torch
             import soundfile as sf
             import io
+
 
             seed = None
             if speaker_seeds:
@@ -248,6 +256,7 @@ class DiaTTS:
             with torch.no_grad():
                 if speaker_seeds and "speaker_seeds" in self.model.generate.__code__.co_varnames:
                     output = self.model.generate(text, speaker_seeds=list(speaker_seeds.values()))
+
                 else:
                     output = self.model.generate(text)
             
@@ -264,6 +273,28 @@ class DiaTTS:
             logger.error(f"Speech generation failed: {e}")
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
+
+
+def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = 4000) -> List[List[DialogueEntry]]:
+    """Split dialogue into chunks that stay under a character limit."""
+    chunks: List[List[DialogueEntry]] = []
+    current: List[DialogueEntry] = []
+    length = 0
+
+    for entry in dialogue:
+        approx_len = len(entry.text) + 10
+        if length + approx_len > max_chars and current:
+            chunks.append(current)
+            current = [entry]
+            length = approx_len
+        else:
+            current.append(entry)
+            length += approx_len
+
+    if current:
+        chunks.append(current)
+
+    return chunks
 
 # Triton TTS client
 class TritonTTSClient:
@@ -388,11 +419,34 @@ async def process_job(job_id: str, request: TTSRequest):
     try:
         job_manager.create_job(job_id)
         job_manager.update_status(job_id, JobStatus.RUNNING, "Processing TTS request")
-        
-        # Format input text
+
+
+        def chunk_dialogue(entries: List[DialogueEntry], max_chars: int = 1000) -> List[List[DialogueEntry]]:
+            """Split dialogue entries into chunks that fit within max_chars."""
+            chunks: List[List[DialogueEntry]] = []
+            current: List[DialogueEntry] = []
+            length = 0
+            for entry in entries:
+                est_len = len(entry.text) + 10  # rough tag size
+                if current and length + est_len > max_chars:
+                    chunks.append(current)
+                    current = [entry]
+                    length = est_len
+                else:
+                    current.append(entry)
+                    length += est_len
+            if current:
+                chunks.append(current)
+            return chunks
+
+        dialogue_chunks = chunk_dialogue(request.dialogue)
+        audio_pieces: List[bytes] = []
+
+
         if primary_tts_client:
             logger.info("Using Triton for TTS generation")
             client_type = "Triton"
+
             formatted_text = primary_tts_client.format_input(request.dialogue)
 
             try:
@@ -425,12 +479,22 @@ async def process_job(job_id: str, request: TTSRequest):
             job_manager.clear_speaker_seeds(job_id)
 
         if not primary_tts_client and not local_tts_available:
+
             raise RuntimeError("No TTS services available")
-        
+
+        for idx, chunk in enumerate(dialogue_chunks, 1):
+            chunk_text = formatter(chunk)
+            job_manager.update_status(job_id, JobStatus.RUNNING, f"Generating speech chunk {idx}/{len(dialogue_chunks)}")
+            piece = await gen(chunk_text) if primary_tts_client else gen(chunk_text)
+            audio_pieces.append(piece)
+
+        audio_data = b"".join(audio_pieces)
+
         # Save the result
         logger.info(f"Audio generated successfully using {client_type}")
         job_manager.set_result(job_id, audio_data)
         job_manager.update_status(job_id, JobStatus.COMPLETED, "TTS complete")
+        job_manager.clear_job(job_id)
     
     except Exception as e:
         logger.error(f"Job {job_id} failed: {e}")
@@ -473,4 +537,3 @@ async def health():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8889)
-
