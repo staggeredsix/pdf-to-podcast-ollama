@@ -2,38 +2,34 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[19:28:56] Submitting PDFs for processing...
+[21:16:17] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[19:28:56] Job ID received: 3b773b6f-4cac-4008-8151-50591996d9c3
-[19:28:56] Connected to status WebSocket
-[19:28:56] Sent ready acknowledgment
-[19:28:56] pdf: pending - Job created
-[19:28:56] pdf: processing - Processing 1 PDFs
-[19:32:01] pdf: completed - All PDFs processed successfully
-[19:32:01] agent: pending - Job created
-[19:32:01] agent: processing - Initializing processing
-[19:32:01] agent: processing - Summarizing 1 PDFs
-[19:32:08] agent: processing - Generating initial outline
-[19:32:15] agent: processing - Converting raw outline to structured format
-[19:32:23] agent: processing - Processing segment 1/5: Introduction
-[19:32:23] agent: processing - Processing segment 2/5: Exponential Growth of Compute Demand
-[19:32:23] agent: processing - Processing segment 3/5: NVIDIA's Leadership in Inference Platform
-[19:32:23] agent: processing - Processing segment 4/5: Enterprise AI Adoption and Opportunities
-[19:32:23] agent: processing - Processing segment 5/5: Conclusion and Future Outlook
-[19:32:53] agent: processing - Generating dialogue
-[19:32:53] agent: processing - Converting segment 1/5 to dialogue
-[19:32:53] agent: processing - Converting segment 2/5 to dialogue
-[19:32:53] agent: processing - Converting segment 3/5 to dialogue
-[19:32:53] agent: processing - Converting segment 4/5 to dialogue
-[19:32:53] agent: processing - Converting segment 5/5 to dialogue
-[19:33:34] agent: processing - Combining dialogue segments
-[19:33:34] agent: processing - Combining segment 2/5 with existing dialogue
-[19:33:48] agent: processing - Combining segment 3/5 with existing dialogue
-[19:34:01] agent: processing - Combining segment 4/5 with existing dialogue
-[19:34:15] agent: processing - Combining segment 5/5 with existing dialogue
-[19:34:29] agent: processing - Formatting final conversation
-[19:34:48] agent: completed - Transcription completed successfully
-[19:34:48] tts: pending - Job created
-[19:34:48] tts: processing - Processing TTS request
-[19:34:48] tts: failed - 'JobStatusManager' object has no attribute 'get_speaker_seeds'
-[19:34:48] Job failed in tts: 'JobStatusManager' object has no attribute 'get_speaker_seeds'
+[21:16:17] Job ID received: ca907de9-0bef-4ab9-a481-6b2edf8a5d32
+[21:16:17] Connected to status WebSocket
+[21:16:17] Sent ready acknowledgment
+[21:16:17] pdf: pending - Job created
+[21:16:17] pdf: processing - Processing 2 PDFs
+[21:20:26] pdf: completed - All PDFs processed successfully
+[21:20:26] agent: pending - Job created
+[21:20:26] agent: processing - Initializing processing
+[21:20:26] agent: processing - Summarizing 2 PDFs
+[21:20:40] agent: processing - Generating initial outline
+[21:20:46] agent: processing - Converting raw outline to structured format
+[21:20:57] agent: processing - Processing segment 1/5: Introduction
+[21:20:57] agent: processing - Processing segment 2/5: Section 1: Accelerated Computing
+[21:20:57] agent: processing - Processing segment 3/5: Section 2: Exponential Demand for Compute Power
+[21:20:57] agent: processing - Processing segment 4/5: Section 3: NVIDIA's Leadership in Inference Performance
+[21:20:57] agent: processing - Processing segment 5/5: Conclusion
+[21:21:30] agent: processing - Generating dialogue
+[21:21:30] agent: processing - Converting segment 1/5 to dialogue
+[21:21:30] agent: processing - Converting segment 2/5 to dialogue
+[21:21:30] agent: processing - Converting segment 3/5 to dialogue
+[21:21:30] agent: processing - Converting segment 4/5 to dialogue
+[21:21:30] agent: processing - Converting segment 5/5 to dialogue
+[21:22:07] agent: processing - Combining dialogue segments
+[21:22:07] agent: processing - Combining segment 2/5 with existing dialogue
+[21:22:20] agent: processing - Combining segment 3/5 with existing dialogue
+[21:22:34] agent: processing - Combining segment 4/5 with existing dialogue
+[21:22:48] agent: processing - Combining segment 5/5 with existing dialogue
+[21:23:02] agent: processing - Formatting final conversation
+[21:23:23] agent: completed - Transcription completed successfully

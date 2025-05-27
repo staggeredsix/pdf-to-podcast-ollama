@@ -4,6 +4,8 @@ import sys
 import logging
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
+from enum import Enum
+from datetime import datetime
 
 from typing import List, Dict, Optional
 
@@ -66,27 +68,73 @@ telemetry.initialize(config, app)
 
 # Job manager for tracking TTS jobs
 
+class JobStatus(Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
 class SimpleJobManager:
     def __init__(self):
-        self.jobs = {}
-        self.results = {}
-        self.speaker_seeds = {}
-        try:
-            self.redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=False)
-            self.redis_client.ping()
-            self.use_redis = True
-            logger.info("Connected to Redis")
-        except Exception as e:
-            self.redis_client = None
-            self.use_redis = False
-            logger.info(f"Redis not available, using in-memory storage: {e}")
-
-    def create_job(self, job_id):
-        data = {"status": "created", "message": "Job created"}
-        if self.use_redis:
-            self.redis_client.hset(f"job:{job_id}", mapping=data)
-        else:
-            self.jobs[job_id] = data
+        self.jobs: Dict[str, Dict[str, Any]] = {}
+    
+    def create_job(self, job_id: str, data: Any) -> Dict[str, Any]:
+        """Create a new job"""
+        job = {
+            'id': job_id,
+            'data': data,
+            'status': JobStatus.PENDING,
+            'created_at': datetime.now(),
+            'updated_at': datetime.now(),
+            'message': None,
+            'result': None
+        }
+        self.jobs[job_id] = job
+        return job
+    
+    def update_status(self, job_id: str, status: JobStatus, message: Optional[str] = None) -> None:
+        """Update the status of a job"""
+        if job_id not in self.jobs:
+            raise KeyError(f"Job {job_id} not found")
+        
+        self.jobs[job_id]['status'] = status
+        if message:
+            self.jobs[job_id]['message'] = message
+        self.jobs[job_id]['updated_at'] = datetime.now()
+    
+    def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """Get job by ID"""
+        return self.jobs.get(job_id)
+    
+    def get_all_jobs(self) -> Dict[str, Dict[str, Any]]:
+        """Get all jobs"""
+        return self.jobs
+    
+    def delete_job(self, job_id: str) -> bool:
+        """Delete a job"""
+        if job_id in self.jobs:
+            del self.jobs[job_id]
+            return True
+        return False
+    
+    def set_result(self, job_id: str, result: Any) -> None:
+        """Set the result of a job"""
+        if job_id not in self.jobs:
+            raise KeyError(f"Job {job_id} not found")
+        
+        self.jobs[job_id]['result'] = result
+        self.jobs[job_id]['updated_at'] = datetime.now()
+    
+    def get_jobs_by_status(self, status: JobStatus) -> Dict[str, Dict[str, Any]]:
+        """Get all jobs with a specific status"""
+        return {job_id: job for job_id, job in self.jobs.items() if job['status'] == status}
+    
+    def clear_completed_jobs(self) -> int:
+        """Remove all completed jobs and return count"""
+        completed_jobs = [job_id for job_id, job in self.jobs.items() if job['status'] == JobStatus.COMPLETED]
+        for job_id in completed_jobs:
+            del self.jobs[job_id]
+        return len(completed_jobs)
 
 
 
