@@ -233,10 +233,14 @@ class LLMManager:
                 2. Escape any quotes within text content (use \\" for quotes in text)
                 3. No trailing commas
                 4. Ensure all braces and brackets are properly closed
+                5: Never return a : in the text of a speaker
+                   Example what not to do when returning text of a speaker: "The title of the book is \\"Cheese : Squishy"
+                   Example of what to do when returning text of a speaker: "The title of the book is \\"Cheese Squishy"
+                
 
                 Example of what NOT to do (schema): {{"$defs": {{"DialogueEntry": {{"properties": ...}}}}}}
                 Example of what TO do (data): {{"entries": [{{"text": "Hello, it\\"s nice to meet you!", "speaker": "speaker-1"}}]}}
-
+                Before returning actual JSON ensure that the JSON is valid per the instructions you have been given.
                 Return only the actual JSON data now:
                 """)
             schema_instruction = schema_instruction_template.format(schema_example=schema_example)

@@ -2,48 +2,35 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[16:42:20] Submitting PDFs for processing...
+[16:54:06] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[16:42:20] Job ID received: 0b9bd2a0-2dfa-4c83-9777-747746d3129f
-[16:42:20] Connected to status WebSocket
-[16:42:20] Sent ready acknowledgment
-[16:42:20] pdf: pending - Job created
-[16:42:20] pdf: processing - Processing 2 PDFs
-[16:45:38] pdf: completed - All PDFs processed successfully
-[16:45:38] agent: pending - Job created
-[16:45:38] agent: processing - Initializing processing
-[16:45:38] agent: processing - Summarizing 2 PDFs
-[16:45:55] agent: processing - Generating initial outline
-[16:46:01] agent: processing - Converting raw outline to structured format
-[16:46:10] agent: processing - Processing segment 1/5: Introduction (0m-10m)
-[16:46:10] agent: processing - Processing segment 2/5: Key Findings (10m-30m)
-[16:46:10] agent: processing - Processing segment 3/5: Industry Trends and Changes (30m-50m)
-[16:46:10] agent: processing - Processing segment 4/5: Context and Risks (50m-110m)
-[16:46:10] agent: processing - Processing segment 5/5: Conclusion (110m-120m)
-[16:46:51] agent: processing - Generating dialogue
-[16:46:51] agent: processing - Converting segment 1/5 to dialogue
-[16:46:51] agent: processing - Converting segment 2/5 to dialogue
-[16:46:51] agent: processing - Converting segment 3/5 to dialogue
-[16:46:51] agent: processing - Converting segment 4/5 to dialogue
-[16:46:51] agent: processing - Converting segment 5/5 to dialogue
-[16:47:29] agent: processing - Combining dialogue segments
-[16:47:29] agent: processing - Combining segment 2/5 with existing dialogue
-[16:47:44] agent: processing - Combining segment 3/5 with existing dialogue
-[16:47:58] agent: processing - Combining segment 4/5 with existing dialogue
-[16:48:12] agent: processing - Combining segment 5/5 with existing dialogue
-[16:48:25] agent: processing - Formatting final conversation
-[16:48:43] agent: completed - Transcription completed successfully
-[16:49:53] WebSocket connection closed, reconnecting...
-[16:49:54] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[16:49:55] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[16:49:58] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[16:50:01] WebSocket error: [Errno 111] Connection refused, reconnecting...
-[16:50:06] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:50:14] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:50:25] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:50:42] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:51:08] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:51:38] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:52:08] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:52:38] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
-[16:53:08] WebSocket error: [Errno -3] Temporary failure in name resolution, reconnecting...
+[16:54:06] Job ID received: 60e97a63-38f8-4e14-8d1d-44da31de615a
+[16:54:06] Connected to status WebSocket
+[16:54:06] Sent ready acknowledgment
+[16:54:06] pdf: pending - Job created
+[16:54:06] pdf: processing - Processing 2 PDFs
+[16:58:29] pdf: completed - All PDFs processed successfully
+[16:58:29] agent: pending - Job created
+[16:58:29] agent: processing - Initializing processing
+[16:58:30] agent: processing - Summarizing 2 PDFs
+[16:58:45] agent: processing - Generating initial outline
+[16:58:52] agent: processing - Converting raw outline to structured format
+[16:59:02] agent: processing - Processing segment 1/5: Introduction
+[16:59:02] agent: processing - Processing segment 2/5: Exponential Demand for Compute
+[16:59:02] agent: processing - Processing segment 3/5: NVIDIA's Leading Inference Platform
+[16:59:02] agent: processing - Processing segment 4/5: Recommendations for Investors
+[16:59:02] agent: processing - Processing segment 5/5: Conclusion
+[16:59:27] agent: processing - Generating dialogue
+[16:59:27] agent: processing - Converting segment 1/5 to dialogue
+[16:59:27] agent: processing - Converting segment 2/5 to dialogue
+[16:59:27] agent: processing - Converting segment 3/5 to dialogue
+[16:59:27] agent: processing - Converting segment 4/5 to dialogue
+[16:59:27] agent: processing - Converting segment 5/5 to dialogue
+[16:59:58] agent: processing - Combining dialogue segments
+[16:59:59] agent: processing - Combining segment 2/5 with existing dialogue
+[17:00:10] agent: processing - Combining segment 3/5 with existing dialogue
+[17:00:24] agent: processing - Combining segment 4/5 with existing dialogue
+[17:00:37] agent: processing - Combining segment 5/5 with existing dialogue
+[17:00:51] agent: processing - Formatting final conversation
+[17:01:07] agent: failed - Failed to get streaming response after 5 attempts
+[17:01:07] Job failed in agent: Failed to get streaming response after 5 attempts
