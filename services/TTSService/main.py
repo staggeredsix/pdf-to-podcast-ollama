@@ -488,7 +488,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
 
     """Process a TTS job."""
     try:
-        job_manager.create_job(job_id, job_data)
+        job_manager.create_job(job_id, tts_request)
 
         job_manager.update_status(job_id, JobStatus.PROCESSING, "Processing TTS request")
 
