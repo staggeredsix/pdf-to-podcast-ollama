@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, Dict, Literal, List
 
 
@@ -83,6 +83,15 @@ class PodcastSegment(BaseModel):
     topics: List[SegmentTopic]
     duration: int
     references: List[str]
+    
+    @field_validator('duration', mode='before')
+    @classmethod
+    def convert_duration_to_int(cls, v):
+        """Convert float durations to integers (treating as minutes)."""
+        if isinstance(v, float):
+            return int(v * 60)  # Convert fractional minutes to seconds
+        return int(v)
+
 
 
 class PodcastOutline(BaseModel):
