@@ -480,11 +480,12 @@ async def generate_tts(request_body: TTSRequest, background_tasks: BackgroundTas
             status_code=503, 
             detail="No TTS services available. Both Triton and local Dia failed to initialize."
         )
-    
-    background_tasks.add_task(process_job, job_id, request_body)
+
+    background_tasks.add_task(process_job, job_id=job_id, tts_request=request_body)
     return {"job_id": job_id}
 
-async def process_job(job_id: str, job_data: dict, request: TTSRequest):
+async def process_job(job_id: str, tts_request: TTSRequest):
+
     """Process a TTS job."""
     try:
         job_manager.create_job(job_id, job_data)
@@ -498,7 +499,7 @@ async def process_job(job_id: str, job_data: dict, request: TTSRequest):
             seeds = {"speaker-1": random.randint(0, 2**32 - 1), "speaker-2": random.randint(0, 2**32 - 1)}
             job_manager.set_speaker_seeds(job_id, seeds)
 
-        chunks = chunk_dialogue(request.dialogue)
+        chunks = chunk_dialogue(tts_request.dialogue)
         audio_chunks: List[bytes] = []
 
 
