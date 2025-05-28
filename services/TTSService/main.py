@@ -75,6 +75,7 @@ class JobStatus(Enum):
 class SimpleJobManager:
     def __init__(self):
         self.jobs: Dict[str, Dict[str, any]] = {}
+        self._seeds: Dict[str, Dict[str, int]] = {}
     
     def create_job(self, job_id: str, data: any) -> Dict[str, any]:
         """Create a new job"""
@@ -90,6 +91,18 @@ class SimpleJobManager:
         self.jobs[job_id] = job
         return job
     
+    def set_speaker_seeds(self, job_id: str, seeds: Dict[str, int]):
+        """Store speaker seeds for consistent voice generation."""
+        self._seeds[job_id] = seeds
+    
+    def get_speaker_seeds(self, job_id: str) -> Optional[Dict[str, int]]:
+        """Retrieve speaker seeds for a job."""
+        return self._seeds.get(job_id)
+    
+    def clear_speaker_seeds(self, job_id: str):
+        """Remove speaker seeds for a job."""
+        self._seeds.pop(job_id, None)
+        
     def update_status(self, job_id: str, status: JobStatus, message: Optional[str] = None) -> None:
         """Update the status of a job"""
         if job_id not in self.jobs:
