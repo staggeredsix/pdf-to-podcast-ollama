@@ -117,26 +117,6 @@ class SimpleJobManager:
         """Get job by ID"""
         return self.jobs.get(job_id)
     
-    def get_status(self, job_id: str) -> Dict[str, any]:
-        """Get job status information"""
-        job = self.jobs.get(job_id)
-        if not job:
-            raise ValueError(f"Job {job_id} not found")
-        
-        return {
-            'status': job['status'].value,
-            'message': job.get('message'),
-            'created_at': job['created_at'].isoformat(),
-            'updated_at': job['updated_at'].isoformat()
-        }
-    
-    def get_result(self, job_id: str) -> Optional[any]:
-        """Get job result"""
-        job = self.jobs.get(job_id)
-        if not job:
-            return None
-        return job.get('result')
-    
     def get_all_jobs(self) -> Dict[str, Dict[str, any]]:
         """Get all jobs"""
         return self.jobs
@@ -145,7 +125,6 @@ class SimpleJobManager:
         """Delete a job"""
         if job_id in self.jobs:
             del self.jobs[job_id]
-            self.clear_speaker_seeds(job_id)
             return True
         return False
     
@@ -166,7 +145,6 @@ class SimpleJobManager:
         completed_jobs = [job_id for job_id, job in self.jobs.items() if job['status'] == JobStatus.COMPLETED]
         for job_id in completed_jobs:
             del self.jobs[job_id]
-            self.clear_speaker_seeds(job_id)
         return len(completed_jobs)
 
 
@@ -576,7 +554,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
         logger.info(f"Audio generated successfully using {client_type}")
         job_manager.set_result(job_id, audio_data)
         job_manager.update_status(job_id, JobStatus.COMPLETED, "TTS complete")
-        # Don't delete the job immediately - client needs to retrieve the result
+        job_manager.clear_job(job_id)
     
     except Exception as e:
         logger.error(f"Job {job_id} failed: {str(e)}")
@@ -585,7 +563,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
             job_manager.update_status(job_id, JobStatus.FAILED, str(e))
         else:
             # Create failed job record if it doesn't exist
-            job_manager.create_job(job_id, tts_request)
+            job_manager.create_job(job_id, job_data)
             job_manager.update_status(job_id, JobStatus.FAILED, str(e))
 
 @app.get("/status/{job_id}")
