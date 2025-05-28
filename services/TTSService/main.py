@@ -523,7 +523,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
             for idx, chunk in enumerate(chunks):
                 formatted_text = primary_tts_client.format_input(chunk)
                 try:
-                    job_manager.update_status(job_id, JobStatus.RUNNING, f"Generating speech chunk {idx+1}/{len(chunks)} via Triton")
+                    job_manager.update_status(job_id, JobStatus.PROCESSING, f"Generating speech chunk {idx+1}/{len(chunks)} via Triton")
                     audio_chunk = await primary_tts_client.generate_speech(formatted_text)
                     audio_chunks.append(audio_chunk)
                 except Exception as e:
@@ -538,7 +538,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
         elif local_tts_available:
             logger.info("Using local Dia for TTS generation")
             client_type = "Local Dia"
-            job_manager.update_status(job_id, JobStatus.RUNNING, "Generating speech using local Dia")
+            job_manager.update_status(job_id, JobStatus.PROCESSING, "Generating speech using local Dia")
             for idx, chunk in enumerate(chunks):
                 formatted_text = dia_tts.format_input(chunk)
                 audio_chunk = dia_tts.generate_speech(formatted_text, speaker_seeds=seeds)

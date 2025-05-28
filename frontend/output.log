@@ -2,42 +2,34 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[16:20:29] Submitting PDFs for processing...
+[16:42:20] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[16:20:29] Job ID received: a0d955f9-33f5-4811-8bd5-9169c9ae8080
-[16:20:29] Connected to status WebSocket
-[16:20:29] Sent ready acknowledgment
-[16:20:30] pdf: pending - Job created
-[16:20:30] pdf: processing - Processing 1 PDFs
-[16:23:58] pdf: completed - All PDFs processed successfully
-[16:23:58] agent: pending - Job created
-[16:23:58] agent: processing - Initializing processing
-[16:23:58] agent: processing - Summarizing 1 PDFs
-[16:24:09] agent: processing - Generating initial outline
-[16:24:14] agent: processing - Converting raw outline to structured format
-[16:24:18] agent: failed - 4 validation errors for PodcastOutline
-segments.0.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.25, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
-segments.1.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.5, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
-segments.2.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.5, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
-segments.3.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.75, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
-[16:24:18] Job failed in agent: 4 validation errors for PodcastOutline
-segments.0.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.25, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
-segments.1.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.5, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
-segments.2.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.5, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
-segments.3.duration
-  Input should be a valid integer, got a number with a fractional part [type=int_from_float, input_value=0.75, input_type=float]
-    For further information visit https://errors.pydantic.dev/2.11/v/int_from_float
+[16:42:20] Job ID received: 0b9bd2a0-2dfa-4c83-9777-747746d3129f
+[16:42:20] Connected to status WebSocket
+[16:42:20] Sent ready acknowledgment
+[16:42:20] pdf: pending - Job created
+[16:42:20] pdf: processing - Processing 2 PDFs
+[16:45:38] pdf: completed - All PDFs processed successfully
+[16:45:38] agent: pending - Job created
+[16:45:38] agent: processing - Initializing processing
+[16:45:38] agent: processing - Summarizing 2 PDFs
+[16:45:55] agent: processing - Generating initial outline
+[16:46:01] agent: processing - Converting raw outline to structured format
+[16:46:10] agent: processing - Processing segment 1/5: Introduction (0m-10m)
+[16:46:10] agent: processing - Processing segment 2/5: Key Findings (10m-30m)
+[16:46:10] agent: processing - Processing segment 3/5: Industry Trends and Changes (30m-50m)
+[16:46:10] agent: processing - Processing segment 4/5: Context and Risks (50m-110m)
+[16:46:10] agent: processing - Processing segment 5/5: Conclusion (110m-120m)
+[16:46:51] agent: processing - Generating dialogue
+[16:46:51] agent: processing - Converting segment 1/5 to dialogue
+[16:46:51] agent: processing - Converting segment 2/5 to dialogue
+[16:46:51] agent: processing - Converting segment 3/5 to dialogue
+[16:46:51] agent: processing - Converting segment 4/5 to dialogue
+[16:46:51] agent: processing - Converting segment 5/5 to dialogue
+[16:47:29] agent: processing - Combining dialogue segments
+[16:47:29] agent: processing - Combining segment 2/5 with existing dialogue
+[16:47:44] agent: processing - Combining segment 3/5 with existing dialogue
+[16:47:58] agent: processing - Combining segment 4/5 with existing dialogue
+[16:48:12] agent: processing - Combining segment 5/5 with existing dialogue
+[16:48:25] agent: processing - Formatting final conversation
+[16:48:43] agent: completed - Transcription completed successfully
