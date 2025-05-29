@@ -285,25 +285,30 @@ PODCAST_DIALOGUE_PROMPT_STR = """You are tasked with converting a podcast transc
 3. Required output schema:
 {{ schema }}
 
-Your task is to:
-- Convert the transcript exactly into the specified JSON format 
-- Preserve all dialogue content without any omissions
-- Map {{ speaker_1_name }}'s lines to "speaker-1"
-- Map {{ speaker_2_name }}'s lines to "speaker-2"
+CRITICAL REQUIREMENTS:
+- EVERY dialogue entry MUST have both "text" and "speaker" fields
+- Speaker values MUST be exactly "speaker-1" or "speaker-2"
+- Map {{ speaker_1_name }} to "speaker-1"
+- Map {{ speaker_2_name }} to "speaker-2"
+- Include ALL dialogue content without omissions
 
-You absolutely must, without exception:
-- Use proper Unicode characters directly (e.g., use ' instead of \\u2019)
-- Ensure all apostrophes, quotes, and special characters are properly formatted
-- Do not escape Unicode characters in the output
+JSON FORMATTING RULES:
+- Use proper Unicode characters directly (use ' not \\u2019)
+- Convert numbers to spoken form ("one thousand" not "1000")
+- Convert currency to spoken form ("one thousand dollars" not "$1000")
+- Convert percentages to spoken form ("fifty percent" not "50%")
+- Convert math symbols to words ("equals" not "=")
 
-You absolutely must, without exception:
-- Convert all numbers and symbols to spoken form:
-  * Numbers should be spelled out (e.g., "one thousand" instead of "1000")
-  * Currency should be expressed as "[amount] [unit of currency]" (e.g., "one thousand dollars" instead of "$1000")
-  * Mathematical symbols should be spoken (e.g., "equals" instead of "=", "plus" instead of "+")
-  * Percentages should be spoken as "percent" (e.g., "fifty percent" instead of "50%")
+EXAMPLE FORMAT:
+{
+  "scratchpad": "Notes about the conversation",
+  "dialogue": [
+    {"text": "Hello and welcome to the show", "speaker": "speaker-1"},
+    {"text": "Thanks for having me", "speaker": "speaker-2"}
+  ]
+}
 
-Please output the JSON following the provided schema, maintaining all conversational details and speaker attributions. The output should use proper Unicode characters directly, not escaped sequences. Do not output anything besides the JSON."""
+Output only valid JSON following this exact structure: """
 
 # Dictionary mapping prompt names to their template strings
 PROMPT_TEMPLATES = {
