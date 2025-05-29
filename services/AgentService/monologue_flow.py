@@ -7,6 +7,7 @@ It includes functionality for summarizing PDFs, generating outlines, and creatin
 
 from shared.api_types import JobStatus, TranscriptionRequest  # Job status tracking and request types
 from shared.podcast_types import Conversation  # Podcast conversation data structures
+from shared.conversation_utils import fix_conversation_json
 from shared.pdf_types import PDFMetadata  # PDF document metadata and content
 from shared.llmmanager import LLMManager  # LLM interaction management
 from shared.job import JobStatusManager  # Background job status tracking
@@ -258,6 +259,8 @@ async def monologue_create_final_conversation(
         for entry in conversation_json["dialogues"]:
             if "text" in entry:
                 entry["text"] = unescape_unicode_string(entry["text"])
+
+    conversation_json = fix_conversation_json(conversation_json)
 
     prompt_tracker.track(
         "create_final_conversation",

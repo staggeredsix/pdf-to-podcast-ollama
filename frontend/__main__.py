@@ -196,7 +196,9 @@ with gr.Blocks(css=css, js=js_func) as demo:
         service = os.environ["API_SERVICE_URL"]
         url = f"{service}/saved_podcast/{job_id}/transcript"
         params = {"userId": "test-userid"}
-        filepath = "/project/frontend/demo_outputs/transcript_" + filename + ".json"
+        output_dir = "/project/frontend/demo_outputs"
+        os.makedirs(output_dir, exist_ok=True)
+        filepath = os.path.join(output_dir, "transcript_" + filename + ".json")
         
         response = requests.get(url, params=params)
         if response.status_code == 200:
@@ -213,7 +215,9 @@ with gr.Blocks(css=css, js=js_func) as demo:
         service = os.environ["API_SERVICE_URL"]
         url = f"{service}/saved_podcast/{job_id}/history"
         params = {"userId": "test-userid"}
-        filepath = "/project/frontend/demo_outputs/generation_history_" + filename + ".json"
+        output_dir = "/project/frontend/demo_outputs"
+        os.makedirs(output_dir, exist_ok=True)
+        filepath = os.path.join(output_dir, "generation_history_" + filename + ".json")
         response = requests.get(url, params=params)
 
         if response.status_code == 200:

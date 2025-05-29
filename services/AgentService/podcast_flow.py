@@ -7,6 +7,7 @@ It includes functionality for summarizing PDFs, generating outlines, and creatin
 
 from shared.pdf_types import PDFMetadata
 from shared.podcast_types import Conversation, PodcastOutline
+from shared.conversation_utils import fix_conversation_json
 from shared.api_types import JobStatus, TranscriptionRequest
 from shared.llmmanager import LLMManager
 from shared.job import JobStatusManager
@@ -605,6 +606,8 @@ async def podcast_create_final_conversation(
         for entry in conversation_json["dialogues"]:
             if "text" in entry:
                 entry["text"] = unescape_unicode_string(entry["text"])
+
+    conversation_json = fix_conversation_json(conversation_json)
 
     prompt_tracker.track(
         "create_final_conversation",
