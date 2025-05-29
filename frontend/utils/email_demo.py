@@ -370,7 +370,9 @@ def test_api(
             audio_content = get_output_with_retry(base_url, job_id)
 
             # Save the audio file
-            output_path = os.path.join("/project/frontend/demo_outputs/", str(email[0]).split('@')[0] + "-output.mp3")
+            output_dir = "/project/frontend/demo_outputs"
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, str(email[0]).split('@')[0] + "-output.mp3")
             with open(output_path, "wb") as f:
                 f.write(audio_content)
             print(f"[{datetime.now().strftime('%H:%M:%S')}] ✓ Audio file saved as '{output_path}' ({len(audio_content)} bytes)")
