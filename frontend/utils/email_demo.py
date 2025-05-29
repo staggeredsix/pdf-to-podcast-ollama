@@ -100,6 +100,13 @@ class StatusMonitor:
                                 pass
 
                             await self._handle_message(message)
+                            
+                            # If TTS completed, break the inner loop but keep connection alive briefly
+                            if self.tts_completed.is_set():
+                                print(f"[{self.get_time()}] TTS completed, keeping connection for 5 more seconds...")
+                                await asyncio.sleep(5)  # Give time for any final messages
+                                break
+                                
                         except asyncio.TimeoutError:
                             try:
                                 pong_waiter = await websocket.ping()
@@ -109,17 +116,22 @@ class StatusMonitor:
 
             except websockets.exceptions.ConnectionClosed:
                 self.ready_event.clear()
-                if not self.stop_event.is_set():
+                if not self.stop_event.is_set() and not self.tts_completed.is_set():
                     print(
                         f"[{self.get_time()}] WebSocket connection closed, reconnecting..."
                     )
+                else:
+                    print(f"[{self.get_time()}] WebSocket closed after TTS completion - OK")
+                    break
 
             except Exception as e:
                 self.ready_event.clear()
-                if not self.stop_event.is_set():
+                if not self.stop_event.is_set() and not self.tts_completed.is_set():
                     print(f"[{self.get_time()}] WebSocket error: {e}, reconnecting...")
+                else:
+                    break
 
-            if not self.stop_event.is_set():
+            if not self.stop_event.is_set() and not self.tts_completed.is_set():
                 await asyncio.sleep(self.reconnect_delay)
                 self.reconnect_delay = min(
                     self.reconnect_delay * 1.5, self.max_reconnect_delay
@@ -143,9 +155,11 @@ class StatusMonitor:
                         print(f"[{self.get_time()}] Job failed in {service}: {msg}")
                         self.stop_event.set()
 
+                    # IMPORTANT: Only set completion after TTS specifically completes
                     if service == "tts" and status == "completed":
+                        print(f"[{self.get_time()}] TTS COMPLETED - Safe to fetch audio!")
                         self.tts_completed.set()
-                        self.stop_event.set()
+                        # Don't set stop_event yet - let the main thread handle it
 
         except json.JSONDecodeError:
             print(f"[{self.get_time()}] Received invalid JSON: {message}")
@@ -153,31 +167,42 @@ class StatusMonitor:
             print(f"[{self.get_time()}] Error processing message: {e}")
 
 
-def get_output_with_retry(base_url: str, job_id: str, max_retries=5, retry_delay=1):
+def get_output_with_retry(base_url: str, job_id: str, max_retries=10, retry_delay=2):
     """Retry getting output with exponential backoff"""
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Fetching audio output...")
+    
     for attempt in range(max_retries):
         try:
             response = requests.get(
                 f"{base_url}/output/{job_id}", params={"userId": TEST_USER_ID}
             )
+            
             if response.status_code == 200:
-                return response.content
+                content_length = len(response.content)
+                if content_length > 1000:  # Ensure we got actual audio data
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] ✓ Successfully retrieved audio ({content_length} bytes)")
+                    return response.content
+                else:
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Warning: Retrieved content too small ({content_length} bytes), retrying...")
+                    
             elif response.status_code == 404:
-                wait_time = retry_delay * (2**attempt)
-                print(
-                    f"[datetime.now().strftime('%H:%M:%S')] Output not ready yet, retrying in {wait_time:.1f}s..."
-                )
-                time.sleep(wait_time)
-                continue
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Audio not ready yet (attempt {attempt + 1}/{max_retries})")
             else:
-                response.raise_for_status()
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Unexpected status {response.status_code}: {response.text}")
+                
+            # Wait before retry with exponential backoff
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (1.5 ** attempt)
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] Retrying in {wait_time:.1f}s...")
+                time.sleep(wait_time)
+                
         except requests.RequestException as e:
-            print(f"[datetime.now().strftime('%H:%M:%S')] Error getting output: {e}")
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Network error: {e}")
             if attempt == max_retries - 1:
                 raise
             time.sleep(retry_delay * (2**attempt))
 
-    raise TimeoutError("Failed to get output after maximum retries")
+    raise TimeoutError(f"Failed to get valid audio output after {max_retries} attempts")
 
 
 def test_saved_podcasts(base_url: str, job_id: str, max_retries=5, retry_delay=5):
@@ -330,13 +355,16 @@ def test_api(
         try:
             # Wait for TTS completion or timeout
             max_wait = 40 * 60
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Waiting for TTS completion (max {max_wait//60} minutes)...")
+            
             if not monitor.tts_completed.wait(timeout=max_wait):
                 raise TimeoutError(f"Test timed out after {max_wait} seconds")
 
-            # If we get here, TTS completed successfully
-            print(
-                f"\n[{datetime.now().strftime('%H:%M:%S')}] TTS processing completed, retrieving audio file..."
-            )
+            # Explicitly confirm TTS completed
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] ✓ TTS COMPLETED! Now retrieving audio file...")
+            
+            # Give the API service a moment to store the result
+            time.sleep(2)
 
             # Get the final output with retry logic
             audio_content = get_output_with_retry(base_url, job_id)
@@ -345,9 +373,7 @@ def test_api(
             output_path = os.path.join("/project/frontend/demo_outputs/", str(email[0]).split('@')[0] + "-output.mp3")
             with open(output_path, "wb") as f:
                 f.write(audio_content)
-            print(
-                f"[{datetime.now().strftime('%H:%M:%S')}] Audio file saved as '{output_path}'"
-            )
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] ✓ Audio file saved as '{output_path}' ({len(audio_content)} bytes)")
 
             # Test saved podcasts endpoints with the newly created job_id
             test_saved_podcasts(base_url, job_id)
@@ -368,6 +394,7 @@ def test_api(
                 print(f"RAG Results: {json.dumps(rag_results, indent=2)}")
 
         finally:
+            # Always stop the monitor
             monitor.stop()
             return job_id
 
