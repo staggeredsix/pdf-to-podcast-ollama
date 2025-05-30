@@ -2,11 +2,11 @@
     "scratchpad": "",
     "dialogue": [
       {
-        "text": "Welcome to our discussion on attention models in natural language processing. I'm Kate, and I'm excited to be joined today by Bob. Hi, Bob.",
+        "text": "Welcome to our discussion on attention models in natural language processing. I'm Chris, and I'm excited to be joined today by Andy. Hi, Andy.",
         "speaker": "speaker-1"
       },
       {
-        "text": "Hi, Kate. It's great to be here.",
+        "text": "Hi, Chris. It's great to be here.",
         "speaker": "speaker-2"
       },
       {
@@ -178,11 +178,11 @@
         "speaker": "speaker-2"
       },
       {
-        "text": "Okay, well, I think that's all the time we have for today. Thanks for joining me, Bob.",
+        "text": "Okay, well, I think that's all the time we have for today. Thanks for joining me, Andy.",
         "speaker": "speaker-1"
       },
       {
-        "text": "Thanks, Kate. It was a pleasure.",
+        "text": "Thanks, Chris. It was a pleasure.",
         "speaker": "speaker-2"
       },
       {
