@@ -4,9 +4,7 @@ import sys
 import logging
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
-from enum import Enum
-from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
 from shared.job import JobStatusManager
 from shared.api_types import ServiceType, JobStatus
@@ -35,11 +33,15 @@ class DialogueEntry(BaseModel):
     speaker: str
     voice_id: Optional[str] = None
 
+DEFAULT_MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "4000"))
+
+
 class TTSRequest(BaseModel):
     dialogue: List[DialogueEntry]
     job_id: str
     scratchpad: Optional[str] = ""
     voice_mapping: Optional[Dict[str, str]] = {}
+    max_chars: int = DEFAULT_MAX_CHARS
 
 # Initialize FastAPI app
 app = FastAPI(title="Dia TTS Service")
@@ -154,6 +156,12 @@ class DiaTTS:
         if not self.is_initialized or self.model is None:
             raise RuntimeError("Dia TTS engine is not initialized")
 
+        # Ensure we always pass a string to the underlying TTS model
+        if isinstance(text, DialogueEntry):
+            text = text.text
+        elif not isinstance(text, str):
+            text = str(text)
+
         logger.info(f"Generating speech: {text[:50]}...")
         try:
             import torch
@@ -193,7 +201,7 @@ class DiaTTS:
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
 
-def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = 4000) -> List[List[DialogueEntry]]:
+def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[List[DialogueEntry]]:
     """Split dialogue into chunks under a character limit."""
     chunks: List[List[DialogueEntry]] = []
     current: List[DialogueEntry] = []
@@ -255,7 +263,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
             set_speaker_seeds(job_id, seeds)
 
         # Process dialogue in chunks
-        chunks = chunk_dialogue(tts_request.dialogue)
+        chunks = chunk_dialogue(tts_request.dialogue, max_chars=tts_request.max_chars)
         audio_chunks: List[bytes] = []
 
         logger.info("Using local Dia for TTS generation")
