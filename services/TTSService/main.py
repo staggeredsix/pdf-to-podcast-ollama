@@ -75,6 +75,9 @@ def clear_speaker_seeds(job_id: str):
     speaker_seeds.pop(job_id, None)
 
 # Initialize Dia TTS
+SPEAKER_TAGS = {"speaker-1": "[S1]", "speaker-2": "[S2]"}
+
+
 class DiaTTS:
     def __init__(self):
         self.model = None
@@ -138,8 +141,10 @@ class DiaTTS:
             logger.error(f"Failed to install Dia package: {e}")
     
     def format_input(self, dialogue: List[DialogueEntry]) -> str:
+
         """Format dialogue entries using the shared formatter."""
         return format_dialogue(dialogue)
+
 
     def generate_speech(self, text, speaker_seeds: Optional[Dict[str, int]] = None):
         """Generate speech from input text using optional speaker seeds."""
@@ -185,6 +190,7 @@ class DiaTTS:
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
 
+
 def format_dialogue(dialogue: List[DialogueEntry]) -> str:
     """Format dialogue entries into a single text string with speaker tags."""
     text = ""
@@ -214,6 +220,7 @@ def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_C
             split_pos = max_chars
         chunks.append(remaining[:split_pos].strip())
         remaining = remaining[split_pos:].strip()
+
     return chunks
 
 # Initialize TTS engine
