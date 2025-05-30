@@ -2,11 +2,10 @@ import os
 import subprocess
 import sys
 import logging
+import re
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
-from enum import Enum
-from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
 from shared.job import JobStatusManager
 from shared.api_types import ServiceType, JobStatus
@@ -35,11 +34,18 @@ class DialogueEntry(BaseModel):
     speaker: str
     voice_id: Optional[str] = None
 
+DEFAULT_MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "4000"))
+
+# Regex used to split text on natural pause boundaries
+SPLIT_REGEX = re.compile(r"(?<=[.,!?…])\s+")
+
+
 class TTSRequest(BaseModel):
     dialogue: List[DialogueEntry]
     job_id: str
     scratchpad: Optional[str] = ""
     voice_mapping: Optional[Dict[str, str]] = {}
+    max_chars: int = DEFAULT_MAX_CHARS
 
 # Initialize FastAPI app
 app = FastAPI(title="Dia TTS Service")
@@ -146,7 +152,8 @@ class DiaTTS:
                 speaker_map[key] = f"[S{speaker_idx}]"
                 speaker_idx += 1
             tag = speaker_map[key]
-            text += f"{tag} {entry.text} "
+            line = entry.text.replace("...", "…")
+            text += f"{tag} {line}\n"
         return text.strip()
 
     def generate_speech(self, text, speaker_seeds: Optional[Dict[str, int]] = None):
@@ -193,19 +200,27 @@ class DiaTTS:
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
 
-def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = 4000) -> List[List[DialogueEntry]]:
+def split_text_on_punctuation(text: str) -> List[str]:
+    """Break text using common pause punctuation for natural pacing."""
+    text = text.replace("...", "…")
+    parts = SPLIT_REGEX.split(text)
+    return [p.strip() for p in parts if p.strip()]
+
+
+def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[List[DialogueEntry]]:
     """Split dialogue into chunks under a character limit."""
     chunks: List[List[DialogueEntry]] = []
     current: List[DialogueEntry] = []
     length = 0
     for entry in dialogue:
-        approx = len(entry.text) + 10
-        if length + approx > max_chars and current:
-            chunks.append(current)
-            current = [entry]
-            length = approx
-        else:
-            current.append(entry)
+        pieces = split_text_on_punctuation(entry.text)
+        for piece in pieces:
+            approx = len(piece) + 10
+            if length + approx > max_chars and current:
+                chunks.append(current)
+                current = []
+                length = 0
+            current.append(DialogueEntry(text=piece, speaker=entry.speaker, voice_id=entry.voice_id))
             length += approx
     if current:
         chunks.append(current)
@@ -255,7 +270,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
             set_speaker_seeds(job_id, seeds)
 
         # Process dialogue in chunks
-        chunks = chunk_dialogue(tts_request.dialogue)
+        chunks = chunk_dialogue(tts_request.dialogue, max_chars=tts_request.max_chars)
         audio_chunks: List[bytes] = []
 
         logger.info("Using local Dia for TTS generation")
