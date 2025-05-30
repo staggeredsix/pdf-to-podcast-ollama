@@ -2,46 +2,83 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[17:16:40] Submitting PDFs for processing...
+[18:40:50] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[17:16:40] Job ID received: 3afec50a-6b50-4bb3-87ef-9801be5f4223
-[17:16:40] Waiting for TTS completion (max 40 minutes)...
-[17:16:40] Connected to status WebSocket
-[17:16:40] Sent ready acknowledgment
-[17:16:40] pdf: pending - Job created
-[17:16:40] pdf: processing - Processing 1 PDFs
-[17:17:53] pdf: completed - All PDFs processed successfully
-[17:17:53] agent: pending - Job created
-[17:17:53] agent: processing - Initializing processing
-[17:17:53] agent: processing - Summarizing 1 PDFs
-[17:18:02] agent: processing - Generating initial outline
-[17:18:08] agent: processing - Converting raw outline to structured format
-[17:18:17] agent: processing - Processing segment 1/5: Intro
-[17:18:17] agent: processing - Processing segment 2/5: Section 1: Regulatory Framework Overview
-[17:18:17] agent: processing - Processing segment 3/5: Section 2: Investment Risks and Considerations
-[17:18:17] agent: processing - Processing segment 4/5: Section 3: Recommendations and Considerations
-[17:18:17] agent: processing - Processing segment 5/5: Conclusion
-[17:18:49] agent: processing - Generating dialogue
-[17:18:49] agent: processing - Converting segment 1/5 to dialogue
-[17:18:49] agent: processing - Converting segment 2/5 to dialogue
-[17:18:49] agent: processing - Converting segment 3/5 to dialogue
-[17:18:49] agent: processing - Converting segment 4/5 to dialogue
-[17:18:49] agent: processing - Converting segment 5/5 to dialogue
-[17:19:26] agent: processing - Combining dialogue segments
-[17:19:26] agent: processing - Combining segment 2/5 with existing dialogue
-[17:19:40] agent: processing - Combining segment 3/5 with existing dialogue
-[17:19:54] agent: processing - Combining segment 4/5 with existing dialogue
-[17:20:07] agent: processing - Combining segment 5/5 with existing dialogue
-[17:20:21] agent: processing - Formatting final conversation
-[17:20:41] agent: completed - Transcription completed successfully
-[17:20:41] tts: pending - Job created
-[17:20:41] tts: processing - Processing TTS request
-[17:20:41] tts: processing - Generating speech using local Dia
-[17:20:41] tts: processing - Processing chunk 1/2
-[17:21:12] tts: processing - Processing chunk 2/2
-[17:21:40] tts: completed - TTS complete
-[17:21:40] TTS COMPLETED - Safe to fetch audio!
-[17:21:40] TTS completed, keeping connection for 5 more seconds...
-[17:21:40] ✓ TTS COMPLETED! Now retrieving audio file...
-[17:21:42] Fetching audio output...
-[17:21:42] ✓ Successfully retrieved audio (591435 bytes)
+[18:40:50] Job ID received: e37fd6df-e3f5-4589-b380-ba03af0851b6
+[18:40:50] Waiting for TTS completion (max 40 minutes)...
+[18:40:50] Connected to status WebSocket
+[18:40:50] Sent ready acknowledgment
+[18:40:50] pdf: pending - Job created
+[18:40:50] pdf: processing - Processing 1 PDFs
+[18:41:53] pdf: completed - All PDFs processed successfully
+[18:41:53] agent: pending - Job created
+[18:41:53] agent: processing - Initializing processing
+[18:41:53] agent: processing - Summarizing 1 PDFs
+[18:42:03] agent: processing - Generating initial outline
+[18:42:10] agent: processing - Converting raw outline to structured format
+[18:42:21] agent: processing - Processing segment 1/5: Introduction
+[18:42:21] agent: processing - Processing segment 2/5: Key Findings and Conclusions
+[18:42:21] agent: processing - Processing segment 3/5: Investment Recommendations and Risks
+[18:42:21] agent: processing - Processing segment 4/5: Supporting Context and Evidence
+[18:42:21] agent: processing - Processing segment 5/5: Conclusion and Call to Action
+[18:42:53] agent: processing - Generating dialogue
+[18:42:53] agent: processing - Converting segment 1/5 to dialogue
+[18:42:53] agent: processing - Converting segment 2/5 to dialogue
+[18:42:53] agent: processing - Converting segment 3/5 to dialogue
+[18:42:53] agent: processing - Converting segment 4/5 to dialogue
+[18:42:53] agent: processing - Converting segment 5/5 to dialogue
+[18:43:28] agent: processing - Combining dialogue segments
+[18:43:28] agent: processing - Combining segment 2/5 with existing dialogue
+[18:43:42] agent: processing - Combining segment 3/5 with existing dialogue
+[18:43:56] agent: processing - Combining segment 4/5 with existing dialogue
+[18:44:10] agent: processing - Combining segment 5/5 with existing dialogue
+[18:44:23] agent: processing - Formatting final conversation
+[18:44:43] agent: completed - Transcription completed successfully
+[18:44:43] tts: pending - Job created
+[18:44:43] tts: processing - Processing TTS request
+[18:44:43] tts: processing - Generating speech using local Dia
+[18:44:43] tts: processing - Processing chunk 1/2
+[18:45:21] tts: processing - Processing chunk 2/2
+[18:45:53] tts: completed - TTS complete
+[18:45:53] TTS COMPLETED - Safe to fetch audio!
+[18:45:53] TTS completed, keeping connection for 5 more seconds...
+[18:45:53] ✓ TTS COMPLETED! Now retrieving audio file...
+[18:45:55] Fetching audio output...
+[18:45:55] ✓ Successfully retrieved audio (676322 bytes)
+[18:45:55] ✓ Audio file saved as '/project/frontend/demo_outputs/2cd91133-b332-41b8-8b7a-83ee314b8da0-output.mp3' (676322 bytes)
+
+[18:45:55] Testing saved podcasts endpoints...
+
+Testing list all podcasts endpoint...
+Found 8 saved podcasts
+Successfully found job_id e37fd6df-e3f5-4589-b380-ba03af0851b6 in saved podcasts list
+
+Testing individual podcast metadata endpoint...
+Retrieved metadata for podcast: e37fd6df-e3f5-4589-b380-ba03af0851b6.mp3
+Metadata: {
+  "job_id": "e37fd6df-e3f5-4589-b380-ba03af0851b6",
+  "filename": "e37fd6df-e3f5-4589-b380-ba03af0851b6.mp3",
+  "created_at": "2025-05-30T18:45:53.180000+00:00",
+  "size": 676322,
+  "transcription_params": {
+    "userId": "test-userid",
+    "name": "ishan-test",
+    "duration": 2,
+    "monologue": false,
+    "speaker_1_name": "Chris",
+    "speaker_2_name": "Andy",
+    "voice_mapping": {
+      "speaker-1": "iP95p4xoKVk53GoZ742B",
+      "speaker-2": "9BWtsMINqrJLrRacOk9x"
+    },
+    "guide": null,
+    "vdb_task": false,
+    "tts_chunk_chars": 4000,
+    "use_emotion_tags": true
+  }
+}
+
+Testing individual podcast audio endpoint...
+Successfully retrieved audio data, size: 902258 bytes
+JSON data saved to /project/frontend/demo_outputs/transcript_2cd91133-b332-41b8-8b7a-83ee314b8da0.json
+JSON data saved to /project/frontend/demo_outputs/generation_history_2cd91133-b332-41b8-8b7a-83ee314b8da0.json

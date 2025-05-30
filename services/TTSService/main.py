@@ -79,6 +79,9 @@ def clear_speaker_seeds(job_id: str):
     speaker_seeds.pop(job_id, None)
 
 # Initialize Dia TTS
+SPEAKER_TAGS = {"speaker-1": "[S1]", "speaker-2": "[S2]"}
+
+
 class DiaTTS:
     def __init__(self):
         self.model = None
@@ -142,6 +145,7 @@ class DiaTTS:
             logger.error(f"Failed to install Dia package: {e}")
     
     def format_input(self, dialogue: List[DialogueEntry]) -> str:
+
         """Format dialogue entries into a single text with speaker tags."""
         text = ""
         speaker_map = {}
@@ -224,6 +228,7 @@ def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_C
             length += approx
     if current:
         chunks.append(current)
+
     return chunks
 
 # Initialize TTS engine
@@ -275,11 +280,10 @@ async def process_job(job_id: str, tts_request: TTSRequest):
 
         logger.info("Using local Dia for TTS generation")
         job_manager.update_status(job_id, JobStatus.PROCESSING, "Generating speech using local Dia")
-        
-        for idx, chunk in enumerate(chunks):
+
+        for idx, chunk_text in enumerate(chunks):
             job_manager.update_status(job_id, JobStatus.PROCESSING, f"Processing chunk {idx+1}/{len(chunks)}")
-            formatted_text = dia_tts.format_input(chunk)
-            audio_chunk = dia_tts.generate_speech(formatted_text, speaker_seeds=seeds)
+            audio_chunk = dia_tts.generate_speech(chunk_text, speaker_seeds=seeds)
             audio_chunks.append(audio_chunk)
 
         # Combine all audio chunks

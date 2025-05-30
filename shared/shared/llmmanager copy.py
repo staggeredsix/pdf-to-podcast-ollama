@@ -146,7 +146,7 @@ class LLMManager:
         
         full_prompt = "\n".join(prompt_parts) + "\nAssistant:"
         
-        # Truncate prompt if too long (approximate token counting - 1 token â 4 characters)
+        # Truncate prompt if too long (approximate token counting - 1 token â 4 characters)
         max_chars = 20000  # ~5000 tokens, leaving room for response
         if len(full_prompt) > max_chars:
 
@@ -236,11 +236,10 @@ class LLMManager:
                 5: Never return a : in the text of a speaker
                    Example what not to do when returning text of a speaker: "The title of the book is \\"Cheese : Squishy"
                    Example of what to do when returning text of a speaker: "The title of the book is \\"Cheese Squishy"
-                6. EVERY dialogue entry MUST have both "text" and "speaker" fields
-                7. Speaker values MUST be exactly "speaker-1" or "speaker-2"
+                
 
                 Example of what NOT to do (schema): {{"$defs": {{"DialogueEntry": {{"properties": ...}}}}}}
-                Example of what TO do (data): {{"dialogue": [{{"text": "Hello, it\\"s nice to meet you!", "speaker": "speaker-1"}}]}}
+                Example of what TO do (data): {{"entries": [{{"text": "Hello, it\\"s nice to meet you!", "speaker": "speaker-1"}}]}}
                 Before returning actual JSON ensure that the JSON is valid per the instructions you have been given.
                 Return only the actual JSON data now:
                 """)
@@ -323,11 +322,9 @@ class LLMManager:
                 2. Escape any quotes within text content (use \\" for quotes in text)
                 3. No trailing commas
                 4. Ensure all braces and brackets are properly closed
-                5. EVERY dialogue entry MUST have both "text" and "speaker" fields
-                6. Speaker values MUST be exactly "speaker-1" or "speaker-2"
 
                 Example of what NOT to do (schema): {{"$defs": {{"DialogueEntry": {{"properties": ...}}}}}}
-                Example of what TO do (data): {{"dialogue": [{{"text": "Hello, it\\"s nice to meet you!", "speaker": "speaker-1"}}]}}
+                Example of what TO do (data): {{"entries": [{{"text": "Hello, it\\"s nice to meet you!", "speaker": "speaker-1"}}]}}
 
                 Return only the actual JSON data now:
                 """)
@@ -336,125 +333,6 @@ class LLMManager:
         
         async with httpx.AsyncClient(timeout=120.0) as client:
             return await client.post(url, json=data)
-
-    def _validate_conversation_json(self, data: dict) -> dict:
-        """Validate and fix conversation JSON structure."""
-        if not isinstance(data, dict):
-            return data
-        
-        if "dialogue" in data and isinstance(data["dialogue"], list):
-            fixed_dialogue = []
-            for i, entry in enumerate(data["dialogue"]):
-                if isinstance(entry, dict) and "text" in entry:
-                    # Ensure speaker field exists
-                    if "speaker" not in entry:
-                        entry["speaker"] = "speaker-1" if i % 2 == 0 else "speaker-2"
-                        logger.warning(f"Added missing speaker to dialogue entry {i}")
-                    
-                    # Ensure speaker value is valid
-                    if entry["speaker"] not in ["speaker-1", "speaker-2"]:
-                        entry["speaker"] = "speaker-1" if i % 2 == 0 else "speaker-2"
-                        logger.warning(f"Fixed invalid speaker value in dialogue entry {i}")
-                    
-                    fixed_dialogue.append(entry)
-            
-            data["dialogue"] = fixed_dialogue
-        
-        # Ensure scratchpad exists
-        if "scratchpad" not in data:
-            data["scratchpad"] = ""
-        
-        return data
-
-    def _clean_and_parse_json(self, content: str) -> dict:
-        """Clean and parse JSON response from Ollama."""
-        import ujson as json
-        import re
-        
-        # Remove any leading/trailing whitespace
-        content = content.strip()
-        
-        # Remove code block markers if present
-        content = content.replace('```json', '').replace('```', '')
-        
-        # Try to find JSON in the response
-        json_match = re.search(r'\{.*\}', content, re.DOTALL)
-        if json_match:
-            content = json_match.group()
-        
-        # Try to parse the JSON first without cleaning
-        try:
-            parsed = json.loads(content)
-            # Validate that all dialogue entries have required fields
-            if "dialogue" in parsed and isinstance(parsed["dialogue"], list):
-                for i, entry in enumerate(parsed["dialogue"]):
-                    if isinstance(entry, dict):
-                        if "text" in entry and "speaker" not in entry:
-                            # Try to infer speaker based on position (alternating pattern)
-                            entry["speaker"] = "speaker-1" if i % 2 == 0 else "speaker-2"
-                            logger.warning(f"Added missing speaker field to dialogue entry {i}")
-            return parsed
-        except json.JSONDecodeError:
-            logger.warning("Initial JSON parse failed, attempting to clean...")
-        
-        # Basic cleaning - be more conservative to avoid corrupting speaker fields
-        content = re.sub(r',\s*}', '}', content)  # Remove trailing commas in objects
-        content = re.sub(r',\s*]', ']', content)  # Remove trailing commas in arrays
-        
-        # Try parsing again after basic cleaning
-        try:
-            parsed = json.loads(content)
-            # Validate and fix dialogue entries
-            if "dialogue" in parsed and isinstance(parsed["dialogue"], list):
-                for i, entry in enumerate(parsed["dialogue"]):
-                    if isinstance(entry, dict):
-                        if "text" in entry and "speaker" not in entry:
-                            entry["speaker"] = "speaker-1" if i % 2 == 0 else "speaker-2"
-                            logger.warning(f"Added missing speaker field to dialogue entry {i}")
-            return parsed
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON parsing failed after basic cleaning: {e}")
-            logger.error(f"Content: {content[:500]}...")
-            
-            # Last resort: try to extract dialogue entries manually
-            try:
-                dialogue_entries = []
-                
-                # Look for dialogue patterns in the text
-                patterns = [
-                    r'"text":\s*"([^"]+)",\s*"speaker":\s*"([^"]+)"',
-                    r'"speaker":\s*"([^"]+)",\s*"text":\s*"([^"]+)"',
-                    r'\{\s*"text":\s*"([^"]+)"\s*\}',  # Missing speaker
-                ]
-                
-                for pattern in patterns:
-                    matches = re.findall(pattern, content)
-                    if matches:
-                        for i, match in enumerate(matches):
-                            if len(match) == 2:
-                                if pattern.startswith('"text"'):
-                                    text, speaker = match
-                                else:
-                                    speaker, text = match
-                            else:
-                                text = match[0]
-                                speaker = "speaker-1" if i % 2 == 0 else "speaker-2"
-                            
-                            dialogue_entries.append({
-                                "text": text,
-                                "speaker": speaker
-                            })
-                        break
-                
-                if dialogue_entries:
-                    return {
-                        "scratchpad": "",
-                        "dialogue": dialogue_entries
-                    }
-            except Exception:
-                pass
-                
-            raise ValueError(f"Could not parse JSON: {e}")
 
     def query_sync(
         self,
@@ -505,10 +383,6 @@ class LLMManager:
                                         logger.error(f"Model returned schema instead of data: {content[:200]}...")
                                         raise ValueError("Model returned schema definition instead of actual data")
                                     
-                                    # Validate conversation structure if this looks like a conversation
-                                    if 'dialogue' in parsed_json:
-                                        parsed_json = self._validate_conversation_json(parsed_json)
-                                    
                                     return parsed_json
                                 except (json.JSONDecodeError, ValueError) as e:
                                     logger.error(f"Failed to parse JSON response: {e}")
@@ -520,8 +394,6 @@ class LLMManager:
                                         try:
                                             parsed_json = self._clean_and_parse_json(match)
                                             if '$defs' not in parsed_json and not ('type' in parsed_json and 'properties' in parsed_json):
-                                                if 'dialogue' in parsed_json:
-                                                    parsed_json = self._validate_conversation_json(parsed_json)
                                                 return parsed_json
 
                                         except (json.JSONDecodeError, ValueError):
@@ -566,6 +438,104 @@ class LLMManager:
                 raise Exception(
                     f"Failed to get response after {retries} attempts"
                 ) from e
+
+    def _clean_and_parse_json(self, content: str) -> dict:
+        """Clean and parse JSON response from Ollama."""
+        # Explicitly import ujson here to avoid any local scope issues that could
+        # lead to "local variable 'json' referenced before assignment" errors
+        import ujson as json
+        # Remove any leading/trailing whitespace
+        content = content.strip()
+        
+        # Remove code block markers if present
+        content = content.replace('```json', '').replace('```', '')
+        
+        # Try to find JSON in the response
+        import re
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            content = json_match.group()
+        
+        # Special handling for podcast JSON where the dialogue field is missing
+        if '"scratchpad"' in content and re.search(r'"scratchpad"\s*:\s*"[^"]*"[^{]*\[\s*(?:INTRO|MUSIC|HOST|NARRATOR|BOB|KATE)', content, re.IGNORECASE):
+            try:
+                # Extract scratchpad
+                scratchpad_match = re.search(r'"scratchpad"\s*:\s*"([^"]*)"', content)
+                scratchpad = scratchpad_match.group(1) if scratchpad_match else ""
+                
+                # Extract the dialogue content (everything after scratchpad)
+                dialogue_text = re.sub(r'^.*?"scratchpad"\s*:\s*"[^"]*"[^[]*', '', content, flags=re.DOTALL)
+                
+                # Reconstruct proper JSON
+                fixed_json = '{' + f'"scratchpad": "{scratchpad}", "dialogue": {dialogue_text}'
+                
+                # Try to parse it
+                import json
+                return json.loads(fixed_json)
+            except Exception as e:
+                logger.warning(f"Special handling for podcast JSON failed: {e}")
+        
+        # Common JSON fixes
+        content = content.replace('\n', ' ')  # Remove newlines
+        content = re.sub(r',\s*}', '}', content)  # Remove trailing commas
+        content = re.sub(r',\s*]', ']', content)  # Remove trailing commas in arrays
+        content = re.sub(r'"\s+("|\[)', '": \1', content)  # Add missing colons
+        content = re.sub(r'([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', content)  # Fix missing quotes
+        
+        # Try to parse the JSON first
+        try:
+            parsed = json.loads(content)
+            return parsed
+        except json.JSONDecodeError as e:
+            # If parsing fails, try more aggressive cleaning
+            logger.warning(f"Initial JSON parse failed: {e}, attempting to clean...")
+            
+            # Fix escaped quotes in string values but preserve JSON structure
+            # This regex finds string values and properly escapes quotes within them
+            def fix_quotes_in_strings(match):
+                key_part = match.group(1)  # "key":
+                string_content = match.group(2)  # the content between quotes
+                
+                # Escape any unescaped quotes in the string content
+                fixed_content = string_content.replace('\\"', '__ESCAPED_QUOTE__')  # Preserve already escaped quotes
+                fixed_content = fixed_content.replace('"', '\\"')  # Escape unescaped quotes
+                fixed_content = fixed_content.replace('__ESCAPED_QUOTE__', '\\"')  # Restore escaped quotes
+                
+                return f'{key_part}"{fixed_content}"'
+            
+            # Apply the fix to all string values in the JSON
+            content = re.sub(r'("[^"]+"):\s*"([^"]*(?:\\"[^"]*)*)"', fix_quotes_in_strings, content)
+            
+            # Final attempt to parse
+            try:
+                parsed = json.loads(content)
+                return parsed
+            except json.JSONDecodeError as e2:
+                # Try to extract a balanced JSON block if available
+                extracted = self._extract_json_block(content)
+                if extracted:
+                    return json.loads(extracted)
+                logger.error(f"JSON parsing failed even after cleaning. Error: {e2}")
+                logger.error(f"Content: {content[:500]}...")
+                
+                # Last resort for podcast content - extract anything that looks like a dialogue
+                try:
+                    if "scratchpad" in content or "dialogue" in content:
+                        dialogue_content = []
+                        text_chunks = re.findall(r'(?:HOST|GUEST|NARRATOR|BOB|KATE):\s*([^\n]+)', content)
+                        if text_chunks:
+                            for i, chunk in enumerate(text_chunks):
+                                speaker = "speaker-1" if i % 2 == 0 else "speaker-2"
+                                dialogue_content.append({"text": chunk.strip(), "speaker": speaker})
+                            
+                            return {
+                                "scratchpad": "",
+                                "dialogue": dialogue_content
+                            }
+                except Exception:
+                    pass
+                    
+                raise ValueError(f"Could not parse JSON: {e2}")
 
     def _extract_json_block(self, text: str) -> Optional[str]:
         """Return the first balanced JSON object found in text."""
@@ -618,20 +588,13 @@ class LLMManager:
                             if json_schema:
                                 # Parse JSON response
                                 try:
-                                    parsed_json = self._clean_and_parse_json(content)
-                                    # Validate conversation structure if this looks like a conversation
-                                    if 'dialogue' in parsed_json:
-                                        parsed_json = self._validate_conversation_json(parsed_json)
-                                    return parsed_json
+                                    return json.loads(content)
                                 except json.JSONDecodeError:
                                     # If JSON parsing fails, try to extract JSON from content
                                     import re
                                     json_match = re.search(r'\{.*\}', content, re.DOTALL)
                                     if json_match:
-                                        parsed_json = json.loads(json_match.group())
-                                        if 'dialogue' in parsed_json:
-                                            parsed_json = self._validate_conversation_json(parsed_json)
-                                        return parsed_json
+                                        return json.loads(json_match.group())
                                     raise ValueError(f"Could not parse JSON from response: {content}")
                             else:
                                 return OllamaMessage(content)
@@ -692,10 +655,7 @@ class LLMManager:
                                 full_content += chunk["response"]
                     
                     if json_schema and full_content:
-                        parsed_json = self._clean_and_parse_json(full_content)
-                        if 'dialogue' in parsed_json:
-                            parsed_json = self._validate_conversation_json(parsed_json)
-                        return parsed_json
+                        return self._clean_and_parse_json(full_content)
                     return full_content
                 else:
                     # For NVIDIA endpoints, require API key
@@ -797,11 +757,9 @@ class LLMManager:
                             2. Escape any quotes within text content (use \\" for quotes in text)
                             3. No trailing commas
                             4. Ensure all braces and brackets are properly closed
-                            5. EVERY dialogue entry MUST have both "text" and "speaker" fields
-                            6. Speaker values MUST be exactly "speaker-1" or "speaker-2"
 
                             Example of what NOT to do (schema): {{"$defs": {{"DialogueEntry": {{"properties": ...}}}}}}
-                            Example of what TO do (data): {{"dialogue": [{{"text": "Hello, it\\"s nice to meet you!", "speaker": "speaker-1"}}]}}
+                            Example of what TO do (data): {{"entries": [{{"text": "Hello, it\\"s nice to meet you!", "speaker": "speaker-1"}}]}}
 
                             Return only the actual JSON data now:
                             """)
@@ -825,11 +783,6 @@ class LLMManager:
                                     if '$defs' in parsed_json or 'type' in parsed_json and 'properties' in parsed_json:
                                         logger.error(f"Model returned schema instead of data in streaming: {full_content[:200]}...")
                                         raise ValueError("Model returned schema definition instead of actual data")
-                                    
-                                    # Validate conversation structure if this looks like a conversation
-                                    if 'dialogue' in parsed_json:
-                                        parsed_json = self._validate_conversation_json(parsed_json)
-                                        
                                     return parsed_json
                                 except (json.JSONDecodeError, ValueError) as e:
                                     logger.error(f"Failed to parse JSON from streaming response: {e}")
