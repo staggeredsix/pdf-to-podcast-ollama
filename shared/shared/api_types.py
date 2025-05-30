@@ -66,6 +66,17 @@ class TranscriptionParams(BaseModel):
         False,
         description="If True, creates a VDB task when running NV-Ingest allowing for retrieval abilities",
     )
+    tts_chunk_chars: int = Field(
+        4000,
+        description="Maximum characters per TTS batch for pacing control",
+        gt=100,
+        le=10000,
+    )
+
+    use_emotion_tags: bool = Field(
+        True,
+        description="Allow emotion tags like (laughs) in the generated dialogue",
+    )
 
     @model_validator(mode="after")
     def validate_monologue_settings(self) -> "TranscriptionParams":

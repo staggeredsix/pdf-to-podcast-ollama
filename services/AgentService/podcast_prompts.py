@@ -211,6 +211,12 @@ There are two speakers:
     - Ensure the guest's responses are substantiated by the input text, avoiding unsupported claims.
     - Avoid long monologues; break information into interactive exchanges.
     - Use dialogue tags to express emotions (e.g., "he said excitedly", "she replied thoughtfully") to guide voice synthesis.
+    {% if use_emotion_tags %}
+    - You may insert contextual emotion cues like (laughs) or (sighs) when it feels natural.
+    {% else %}
+    - Do not insert any emotion cues like (laughs) or (sighs).
+    {% endif %}
+    - Avoid exclamation marks (!) unless absolutely necessary.
     - Strive for authenticity. Include:
         - Moments of genuine curiosity or surprise from the host.
         - Instances where the guest may pause to articulate complex ideas.

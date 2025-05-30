@@ -390,6 +390,7 @@ async def podcast_generate_dialogue_segment(
         descriptions=topics_text,
         speaker_1_name=request.speaker_1_name,
         speaker_2_name=request.speaker_2_name,
+        use_emotion_tags=request.use_emotion_tags,
     )
 
     # Query LLM for dialogue
