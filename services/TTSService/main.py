@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import logging
+import re
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -34,6 +35,9 @@ class DialogueEntry(BaseModel):
     voice_id: Optional[str] = None
 
 DEFAULT_MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "4000"))
+
+# Regex used to split text on natural pause boundaries
+SPLIT_REGEX = re.compile(r"(?<=[.,!?…])\s+")
 
 
 class TTSRequest(BaseModel):
@@ -142,9 +146,19 @@ class DiaTTS:
     
     def format_input(self, dialogue: List[DialogueEntry]) -> str:
 
-        """Format dialogue entries using the shared formatter."""
-        return format_dialogue(dialogue)
-
+        """Format dialogue entries into a single text with speaker tags."""
+        text = ""
+        speaker_map = {}
+        speaker_idx = 1
+        for entry in dialogue:
+            key = entry.speaker.lower()
+            if key not in speaker_map:
+                speaker_map[key] = f"[S{speaker_idx}]"
+                speaker_idx += 1
+            tag = speaker_map[key]
+            line = entry.text.replace("...", "…")
+            text += f"{tag} {line}\n"
+        return text.strip()
 
     def generate_speech(self, text, speaker_seeds: Optional[Dict[str, int]] = None):
         """Generate speech from input text using optional speaker seeds."""
@@ -190,36 +204,30 @@ class DiaTTS:
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
 
+def split_text_on_punctuation(text: str) -> List[str]:
+    """Break text using common pause punctuation for natural pacing."""
+    text = text.replace("...", "…")
+    parts = SPLIT_REGEX.split(text)
+    return [p.strip() for p in parts if p.strip()]
 
-def format_dialogue(dialogue: List[DialogueEntry]) -> str:
-    """Format dialogue entries into a single text string with speaker tags."""
-    text = ""
-    speaker_map: Dict[str, str] = {}
-    speaker_idx = 1
+
+def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[List[DialogueEntry]]:
+    """Split dialogue into chunks under a character limit."""
+    chunks: List[List[DialogueEntry]] = []
+    current: List[DialogueEntry] = []
+    length = 0
     for entry in dialogue:
-        key = entry.speaker.lower()
-        if key not in speaker_map:
-            speaker_map[key] = f"[S{speaker_idx}]"
-            speaker_idx += 1
-        tag = speaker_map[key]
-        text += f"{tag} {entry.text} "
-    return text.strip()
-
-
-def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[str]:
-    """Split formatted dialogue into non-overlapping text chunks."""
-    full_text = format_dialogue(dialogue)
-    chunks: List[str] = []
-    remaining = full_text.strip()
-    while remaining:
-        if len(remaining) <= max_chars:
-            chunks.append(remaining)
-            break
-        split_pos = remaining.rfind(" ", 0, max_chars)
-        if split_pos == -1:
-            split_pos = max_chars
-        chunks.append(remaining[:split_pos].strip())
-        remaining = remaining[split_pos:].strip()
+        pieces = split_text_on_punctuation(entry.text)
+        for piece in pieces:
+            approx = len(piece) + 10
+            if length + approx > max_chars and current:
+                chunks.append(current)
+                current = []
+                length = 0
+            current.append(DialogueEntry(text=piece, speaker=entry.speaker, voice_id=entry.voice_id))
+            length += approx
+    if current:
+        chunks.append(current)
 
     return chunks
 
