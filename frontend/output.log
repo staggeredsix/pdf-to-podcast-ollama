@@ -2,28 +2,87 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[22:12:27] Submitting PDFs for processing...
+[22:33:19] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[22:12:27] Job ID received: 2280f4c6-adba-49f0-8ded-702871007e9b
-[22:12:27] Waiting for TTS completion (max 40 minutes)...
-[22:12:27] Connected to status WebSocket
-[22:12:27] Sent ready acknowledgment
-[22:12:27] pdf: pending - Job created
-[22:12:27] pdf: processing - Processing 1 PDFs
-[22:15:58] pdf: completed - All PDFs processed successfully
-[22:15:58] agent: pending - Job created
-[22:15:58] agent: processing - Initializing processing
-[22:15:58] agent: processing - Summarizing 1 PDFs
-[22:16:09] agent: processing - Generating initial outline
-[22:16:15] agent: processing - Converting raw outline to structured format
-[22:16:22] agent: processing - Processing segment 1/5: Intro (0s-10s)
-[22:16:22] agent: processing - Processing segment 2/5: Section 1: The Rise of Enterprise AI Adoption (10s-30s)
-[22:16:22] agent: processing - Processing segment 3/5: Section 2: NVIDIA's Leadership in AI Infrastructure (30s-50s)
-[22:16:22] agent: processing - Processing segment 4/5: Section 3: Sovereign AI and Global Implications (50s-1m10s)
-[22:16:22] agent: processing - Processing segment 5/5: Conclusion (1m10s-2m)
-[22:16:55] agent: processing - Generating dialogue
-[22:16:55] agent: processing - Converting segment 1/5 to dialogue
-[22:16:55] agent: processing - Converting segment 2/5 to dialogue
-[22:16:55] agent: processing - Converting segment 3/5 to dialogue
-[22:16:55] agent: processing - Converting segment 4/5 to dialogue
-[22:16:55] agent: processing - Converting segment 5/5 to dialogue
+[22:33:19] Job ID received: f2100fa9-07e7-4491-b225-d4fe65e8a536
+[22:33:19] Waiting for TTS completion (max 40 minutes)...
+[22:33:19] Connected to status WebSocket
+[22:33:19] Sent ready acknowledgment
+[22:33:19] pdf: pending - Job created
+[22:33:19] pdf: processing - Processing 2 PDFs
+[22:38:12] pdf: completed - All PDFs processed successfully
+[22:38:12] agent: pending - Job created
+[22:38:12] agent: processing - Initializing processing
+[22:38:12] agent: processing - Summarizing 2 PDFs
+[22:38:28] agent: processing - Generating initial outline
+[22:38:36] agent: processing - Converting raw outline to structured format
+[22:38:48] agent: processing - Processing segment 1/7: Introduction
+[22:38:48] agent: processing - Processing segment 2/7: Revenue Growth and Market Presence
+[22:38:48] agent: processing - Processing segment 3/7: AI Platform Expansion and Sovereign AI Initiatives
+[22:38:48] agent: processing - Processing segment 4/7: Market Trends and Risks
+[22:38:48] agent: processing - Processing segment 5/7: Financial Data and Recommendations
+[22:38:48] agent: processing - Processing segment 6/7: Context Document Integration
+[22:38:48] agent: processing - Processing segment 7/7: Conclusion
+[22:39:37] agent: processing - Generating dialogue
+[22:39:37] agent: processing - Converting segment 1/7 to dialogue
+[22:39:38] agent: processing - Converting segment 2/7 to dialogue
+[22:39:38] agent: processing - Converting segment 3/7 to dialogue
+[22:39:38] agent: processing - Converting segment 4/7 to dialogue
+[22:39:38] agent: processing - Converting segment 5/7 to dialogue
+[22:39:38] agent: processing - Converting segment 6/7 to dialogue
+[22:39:38] agent: processing - Converting segment 7/7 to dialogue
+[22:40:34] agent: processing - Combining dialogue segments
+[22:40:34] agent: processing - Combining segment 2/7 with existing dialogue
+[22:40:48] agent: processing - Combining segment 3/7 with existing dialogue
+[22:41:02] agent: processing - Combining segment 4/7 with existing dialogue
+[22:41:15] agent: processing - Combining segment 5/7 with existing dialogue
+[22:41:29] agent: processing - Combining segment 6/7 with existing dialogue
+[22:41:43] agent: processing - Combining segment 7/7 with existing dialogue
+[22:41:56] agent: processing - Formatting final conversation
+[22:42:12] agent: completed - Transcription completed successfully
+[22:42:12] tts: pending - Job created
+[22:42:12] tts: processing - Processing TTS request
+[22:42:12] tts: processing - Generating speech using local Dia
+[22:42:12] tts: processing - Processing chunk 1/2
+[22:42:43] tts: processing - Processing chunk 2/2
+[22:43:02] tts: completed - TTS complete
+[22:43:02] TTS COMPLETED - Safe to fetch audio!
+[22:43:02] TTS completed, keeping connection for 5 more seconds...
+[22:43:02] ✓ TTS COMPLETED! Now retrieving audio file...
+[22:43:04] Fetching audio output...
+[22:43:04] ✓ Successfully retrieved audio (486469 bytes)
+[22:43:04] ✓ Audio file saved as '/project/frontend/demo_outputs/c237e4fe-8360-4a24-88d3-c0b1d6f61b56-output.mp3' (486469 bytes)
+
+[22:43:04] Testing saved podcasts endpoints...
+
+Testing list all podcasts endpoint...
+Found 4 saved podcasts
+Successfully found job_id f2100fa9-07e7-4491-b225-d4fe65e8a536 in saved podcasts list
+
+Testing individual podcast metadata endpoint...
+Retrieved metadata for podcast: f2100fa9-07e7-4491-b225-d4fe65e8a536.mp3
+Metadata: {
+  "job_id": "f2100fa9-07e7-4491-b225-d4fe65e8a536",
+  "filename": "f2100fa9-07e7-4491-b225-d4fe65e8a536.mp3",
+  "created_at": "2025-05-29T22:43:02.508000+00:00",
+  "size": 486469,
+  "transcription_params": {
+    "userId": "test-userid",
+    "name": "ishan-test",
+    "duration": 2,
+    "monologue": false,
+    "speaker_1_name": "Bob",
+    "speaker_2_name": "Kate",
+    "voice_mapping": {
+      "speaker-1": "iP95p4xoKVk53GoZ742B",
+      "speaker-2": "9BWtsMINqrJLrRacOk9x"
+    },
+    "guide": null,
+    "vdb_task": false
+  }
+}
+
+Testing individual podcast audio endpoint...
+Successfully retrieved audio data, size: 649073 bytes
+JSON data saved to /project/frontend/demo_outputs/transcript_c237e4fe-8360-4a24-88d3-c0b1d6f61b56.json
+JSON data saved to /project/frontend/demo_outputs/generation_history_c237e4fe-8360-4a24-88d3-c0b1d6f61b56.json
