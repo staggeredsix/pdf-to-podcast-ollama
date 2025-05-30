@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import logging
+import re
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -75,6 +76,9 @@ def clear_speaker_seeds(job_id: str):
     speaker_seeds.pop(job_id, None)
 
 # Initialize Dia TTS
+SPEAKER_TAGS = {"speaker-1": "[S1]", "speaker-2": "[S2]"}
+
+
 class DiaTTS:
     def __init__(self):
         self.model = None
@@ -138,6 +142,7 @@ class DiaTTS:
             logger.error(f"Failed to install Dia package: {e}")
     
     def format_input(self, dialogue: List[DialogueEntry]) -> str:
+
         """Format dialogue entries into a single text with speaker tags."""
         text = ""
         speaker_map = {}
@@ -148,7 +153,8 @@ class DiaTTS:
                 speaker_map[key] = f"[S{speaker_idx}]"
                 speaker_idx += 1
             tag = speaker_map[key]
-            text += f"{tag} {entry.text} "
+            line = entry.text.replace("...", "…")
+            text += f"{tag} {line}\n"
         return text.strip()
 
     def generate_speech(self, text, speaker_seeds: Optional[Dict[str, int]] = None):
@@ -201,22 +207,25 @@ class DiaTTS:
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
 
+
 def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[List[DialogueEntry]]:
     """Split dialogue into chunks under a character limit."""
     chunks: List[List[DialogueEntry]] = []
     current: List[DialogueEntry] = []
     length = 0
     for entry in dialogue:
-        approx = len(entry.text) + 10
-        if length + approx > max_chars and current:
-            chunks.append(current)
-            current = [entry]
-            length = approx
-        else:
-            current.append(entry)
+        pieces = split_text_on_punctuation(entry.text)
+        for piece in pieces:
+            approx = len(piece) + 10
+            if length + approx > max_chars and current:
+                chunks.append(current)
+                current = []
+                length = 0
+            current.append(DialogueEntry(text=piece, speaker=entry.speaker, voice_id=entry.voice_id))
             length += approx
     if current:
         chunks.append(current)
+
     return chunks
 
 # Initialize TTS engine
@@ -268,11 +277,10 @@ async def process_job(job_id: str, tts_request: TTSRequest):
 
         logger.info("Using local Dia for TTS generation")
         job_manager.update_status(job_id, JobStatus.PROCESSING, "Generating speech using local Dia")
-        
-        for idx, chunk in enumerate(chunks):
+
+        for idx, chunk_text in enumerate(chunks):
             job_manager.update_status(job_id, JobStatus.PROCESSING, f"Processing chunk {idx+1}/{len(chunks)}")
-            formatted_text = dia_tts.format_input(chunk)
-            audio_chunk = dia_tts.generate_speech(formatted_text, speaker_seeds=seeds)
+            audio_chunk = dia_tts.generate_speech(chunk_text, speaker_seeds=seeds)
             audio_chunks.append(audio_chunk)
 
         # Combine all audio chunks

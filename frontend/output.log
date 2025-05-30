@@ -2,46 +2,30 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[17:16:40] Submitting PDFs for processing...
+[19:25:20] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[17:16:40] Job ID received: 3afec50a-6b50-4bb3-87ef-9801be5f4223
-[17:16:40] Waiting for TTS completion (max 40 minutes)...
-[17:16:40] Connected to status WebSocket
-[17:16:40] Sent ready acknowledgment
-[17:16:40] pdf: pending - Job created
-[17:16:40] pdf: processing - Processing 1 PDFs
-[17:17:53] pdf: completed - All PDFs processed successfully
-[17:17:53] agent: pending - Job created
-[17:17:53] agent: processing - Initializing processing
-[17:17:53] agent: processing - Summarizing 1 PDFs
-[17:18:02] agent: processing - Generating initial outline
-[17:18:08] agent: processing - Converting raw outline to structured format
-[17:18:17] agent: processing - Processing segment 1/5: Intro
-[17:18:17] agent: processing - Processing segment 2/5: Section 1: Regulatory Framework Overview
-[17:18:17] agent: processing - Processing segment 3/5: Section 2: Investment Risks and Considerations
-[17:18:17] agent: processing - Processing segment 4/5: Section 3: Recommendations and Considerations
-[17:18:17] agent: processing - Processing segment 5/5: Conclusion
-[17:18:49] agent: processing - Generating dialogue
-[17:18:49] agent: processing - Converting segment 1/5 to dialogue
-[17:18:49] agent: processing - Converting segment 2/5 to dialogue
-[17:18:49] agent: processing - Converting segment 3/5 to dialogue
-[17:18:49] agent: processing - Converting segment 4/5 to dialogue
-[17:18:49] agent: processing - Converting segment 5/5 to dialogue
-[17:19:26] agent: processing - Combining dialogue segments
-[17:19:26] agent: processing - Combining segment 2/5 with existing dialogue
-[17:19:40] agent: processing - Combining segment 3/5 with existing dialogue
-[17:19:54] agent: processing - Combining segment 4/5 with existing dialogue
-[17:20:07] agent: processing - Combining segment 5/5 with existing dialogue
-[17:20:21] agent: processing - Formatting final conversation
-[17:20:41] agent: completed - Transcription completed successfully
-[17:20:41] tts: pending - Job created
-[17:20:41] tts: processing - Processing TTS request
-[17:20:41] tts: processing - Generating speech using local Dia
-[17:20:41] tts: processing - Processing chunk 1/2
-[17:21:12] tts: processing - Processing chunk 2/2
-[17:21:40] tts: completed - TTS complete
-[17:21:40] TTS COMPLETED - Safe to fetch audio!
-[17:21:40] TTS completed, keeping connection for 5 more seconds...
-[17:21:40] ✓ TTS COMPLETED! Now retrieving audio file...
-[17:21:42] Fetching audio output...
-[17:21:42] ✓ Successfully retrieved audio (591435 bytes)
+[19:25:20] Job ID received: 21031cfe-1fbe-43f0-bf23-7e1bce2ec83e
+[19:25:20] Waiting for TTS completion (max 40 minutes)...
+[19:25:20] Connected to status WebSocket
+[19:25:20] Sent ready acknowledgment
+[19:25:20] pdf: pending - Job created
+[19:25:20] pdf: processing - Processing 1 PDFs
+[19:25:26] pdf: completed - All PDFs processed successfully
+[19:25:26] agent: pending - Job created
+[19:25:26] agent: processing - Initializing processing
+[19:25:26] agent: processing - Summarizing 1 PDFs
+[19:25:35] agent: processing - Generating initial outline
+[19:25:41] agent: processing - Converting raw outline to structured format
+[19:25:48] agent: processing - Processing segment 1/5: Introduction
+[19:25:48] agent: processing - Processing segment 2/5: Key Findings and Charges
+[19:25:48] agent: processing - Processing segment 3/5: Credit Applied and Balance
+[19:25:48] agent: processing - Processing segment 4/5: Eligible Spend and Redemption
+[19:25:48] agent: processing - Processing segment 5/5: Conclusion and Notable Trends
+[19:26:20] agent: processing - Generating dialogue
+[19:26:20] agent: processing - Converting segment 1/5 to dialogue
+[19:26:20] agent: processing - Converting segment 2/5 to dialogue
+[19:26:20] agent: processing - Converting segment 3/5 to dialogue
+[19:26:20] agent: processing - Converting segment 4/5 to dialogue
+[19:26:20] agent: processing - Converting segment 5/5 to dialogue
+[19:26:59] agent: processing - Combining dialogue segments
+[19:26:59] agent: processing - Combining segment 2/5 with existing dialogue
