@@ -193,7 +193,9 @@ class DiaTTS:
             raise RuntimeError(f"Failed to generate speech: {e}")
 
 def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[List[DialogueEntry]]:
+
     """Split dialogue into chunks under a character limit while keeping speaker tags consistent."""
+
     chunks: List[List[DialogueEntry]] = []
     current: List[DialogueEntry] = []
     length = 0
