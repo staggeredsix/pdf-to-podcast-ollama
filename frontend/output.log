@@ -2,30 +2,44 @@
 
 To create a public link, set `share=True` in `launch()`.
 
-[19:25:20] Submitting PDFs for processing...
+[19:53:36] Submitting PDFs for processing...
 Using voices: {'speaker-1': 'iP95p4xoKVk53GoZ742B', 'speaker-2': '9BWtsMINqrJLrRacOk9x'}
-[19:25:20] Job ID received: 21031cfe-1fbe-43f0-bf23-7e1bce2ec83e
-[19:25:20] Waiting for TTS completion (max 40 minutes)...
-[19:25:20] Connected to status WebSocket
-[19:25:20] Sent ready acknowledgment
-[19:25:20] pdf: pending - Job created
-[19:25:20] pdf: processing - Processing 1 PDFs
-[19:25:26] pdf: completed - All PDFs processed successfully
-[19:25:26] agent: pending - Job created
-[19:25:26] agent: processing - Initializing processing
-[19:25:26] agent: processing - Summarizing 1 PDFs
-[19:25:35] agent: processing - Generating initial outline
-[19:25:41] agent: processing - Converting raw outline to structured format
-[19:25:48] agent: processing - Processing segment 1/5: Introduction
-[19:25:48] agent: processing - Processing segment 2/5: Key Findings and Charges
-[19:25:48] agent: processing - Processing segment 3/5: Credit Applied and Balance
-[19:25:48] agent: processing - Processing segment 4/5: Eligible Spend and Redemption
-[19:25:48] agent: processing - Processing segment 5/5: Conclusion and Notable Trends
-[19:26:20] agent: processing - Generating dialogue
-[19:26:20] agent: processing - Converting segment 1/5 to dialogue
-[19:26:20] agent: processing - Converting segment 2/5 to dialogue
-[19:26:20] agent: processing - Converting segment 3/5 to dialogue
-[19:26:20] agent: processing - Converting segment 4/5 to dialogue
-[19:26:20] agent: processing - Converting segment 5/5 to dialogue
-[19:26:59] agent: processing - Combining dialogue segments
-[19:26:59] agent: processing - Combining segment 2/5 with existing dialogue
+[19:53:36] Job ID received: ae2bc8a1-914b-47a1-a6d3-e84207511a3c
+[19:53:36] Waiting for TTS completion (max 40 minutes)...
+[19:53:36] Connected to status WebSocket
+[19:53:36] Sent ready acknowledgment
+[19:53:36] pdf: pending - Job created
+[19:53:36] pdf: processing - Processing 1 PDFs
+[19:53:53] pdf: completed - All PDFs processed successfully
+[19:53:53] agent: pending - Job created
+[19:53:53] agent: processing - Initializing processing
+[19:53:53] agent: processing - Summarizing 1 PDFs
+[19:54:04] agent: processing - Generating initial outline
+[19:54:10] agent: processing - Converting raw outline to structured format
+[19:54:19] agent: processing - Processing segment 1/6: Introduction
+[19:54:19] agent: processing - Processing segment 2/6: Overview of MaskRCNN
+[19:54:19] agent: processing - Processing segment 3/6: Requirements and Setup
+[19:54:19] agent: processing - Processing segment 4/6: Training and Evaluation
+[19:54:19] agent: processing - Processing segment 5/6: Critical Statistics and Metrics
+[19:54:19] agent: processing - Processing segment 6/6: Conclusion
+[19:54:56] agent: processing - Generating dialogue
+[19:54:56] agent: processing - Converting segment 1/6 to dialogue
+[19:54:56] agent: processing - Converting segment 2/6 to dialogue
+[19:54:56] agent: processing - Converting segment 3/6 to dialogue
+[19:54:56] agent: processing - Converting segment 4/6 to dialogue
+[19:54:56] agent: processing - Converting segment 5/6 to dialogue
+[19:54:56] agent: processing - Converting segment 6/6 to dialogue
+[19:55:49] agent: processing - Combining dialogue segments
+[19:55:49] agent: processing - Combining segment 2/6 with existing dialogue
+[19:56:03] agent: processing - Combining segment 3/6 with existing dialogue
+[19:56:17] agent: processing - Combining segment 4/6 with existing dialogue
+[19:56:31] agent: processing - Combining segment 5/6 with existing dialogue
+[19:56:45] agent: processing - Combining segment 6/6 with existing dialogue
+[19:56:59] agent: processing - Formatting final conversation
+[19:57:20] agent: completed - Transcription completed successfully
+[19:57:20] tts: pending - Job created
+[19:57:20] tts: processing - Processing TTS request
+[19:57:20] tts: processing - Generating speech using local Dia
+[19:57:20] tts: processing - Processing chunk 1/2
+[19:57:20] tts: failed - Failed to generate speech: 'DialogueEntry' object has no attribute 'encode'
+[19:57:20] Job failed in tts: Failed to generate speech: 'DialogueEntry' object has no attribute 'encode'
