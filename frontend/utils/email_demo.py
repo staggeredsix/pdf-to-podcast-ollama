@@ -286,7 +286,7 @@ def test_api(
     transcription_params = {
         "name": "ishan-test",
         "duration": 2,
-        "speaker_1_name": "Bob",
+        "speaker_1_name": "Chris",
         "voice_mapping": voice_mapping,
         "guide": None,
         "monologue": monologue,
@@ -295,7 +295,7 @@ def test_api(
     }
 
     if not monologue:
-        transcription_params["speaker_2_name"] = "Kate"
+        transcription_params["speaker_2_name"] = "Andy"
 
     print(
         f"\n[{datetime.now().strftime('%H:%M:%S')}] Submitting PDFs for processing..."

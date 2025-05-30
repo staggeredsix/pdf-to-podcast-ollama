@@ -24,7 +24,7 @@ from pathlib import Path
 TEST_USER_ID = "test-userid"
 
 # Add at top of file after imports
-SPEAKER_NAMES = ["Bob", "Kate", "Alex", "Sarah", "Mike"]
+SPEAKER_NAMES = ["Chris", "Andy", "Alex", "Taylor"]
 
 
 class StatusMonitor:
