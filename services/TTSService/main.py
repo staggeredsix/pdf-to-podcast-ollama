@@ -4,9 +4,7 @@ import sys
 import logging
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Response
 from pydantic import BaseModel
-from enum import Enum
-from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 from shared.otel import OpenTelemetryInstrumentation, OpenTelemetryConfig
 from shared.job import JobStatusManager
 from shared.api_types import ServiceType, JobStatus
@@ -35,11 +33,15 @@ class DialogueEntry(BaseModel):
     speaker: str
     voice_id: Optional[str] = None
 
+DEFAULT_MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "4000"))
+
+
 class TTSRequest(BaseModel):
     dialogue: List[DialogueEntry]
     job_id: str
     scratchpad: Optional[str] = ""
     voice_mapping: Optional[Dict[str, str]] = {}
+    max_chars: int = DEFAULT_MAX_CHARS
 
 # Initialize FastAPI app
 app = FastAPI(title="Dia TTS Service")
@@ -73,6 +75,9 @@ def clear_speaker_seeds(job_id: str):
     speaker_seeds.pop(job_id, None)
 
 # Initialize Dia TTS
+SPEAKER_TAGS = {"speaker-1": "[S1]", "speaker-2": "[S2]"}
+
+
 class DiaTTS:
     def __init__(self):
         self.model = None
@@ -136,16 +141,10 @@ class DiaTTS:
             logger.error(f"Failed to install Dia package: {e}")
     
     def format_input(self, dialogue: List[DialogueEntry]) -> str:
-        """Format dialogue entries into a single text with speaker tags."""
+        """Format dialogue entries into a single text with consistent speaker tags."""
         text = ""
-        speaker_map = {}
-        speaker_idx = 1
         for entry in dialogue:
-            key = entry.speaker.lower()
-            if key not in speaker_map:
-                speaker_map[key] = f"[S{speaker_idx}]"
-                speaker_idx += 1
-            tag = speaker_map[key]
+            tag = SPEAKER_TAGS.get(entry.speaker.lower(), f"[{entry.speaker}]")
             text += f"{tag} {entry.text} "
         return text.strip()
 
@@ -193,22 +192,26 @@ class DiaTTS:
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
 
-def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = 4000) -> List[List[DialogueEntry]]:
-    """Split dialogue into chunks under a character limit."""
+def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[List[DialogueEntry]]:
+    """Split dialogue into chunks under a character limit while keeping speaker tags consistent."""
     chunks: List[List[DialogueEntry]] = []
     current: List[DialogueEntry] = []
     length = 0
+
     for entry in dialogue:
-        approx = len(entry.text) + 10
-        if length + approx > max_chars and current:
+        tag = SPEAKER_TAGS.get(entry.speaker.lower(), f"[{entry.speaker}]")
+        entry_len = len(tag) + 1 + len(entry.text) + 1  # tag + space + text + space
+        if length + entry_len > max_chars and current:
             chunks.append(current)
             current = [entry]
-            length = approx
+            length = entry_len
         else:
             current.append(entry)
-            length += approx
+            length += entry_len
+
     if current:
         chunks.append(current)
+
     return chunks
 
 # Initialize TTS engine
@@ -255,7 +258,7 @@ async def process_job(job_id: str, tts_request: TTSRequest):
             set_speaker_seeds(job_id, seeds)
 
         # Process dialogue in chunks
-        chunks = chunk_dialogue(tts_request.dialogue)
+        chunks = chunk_dialogue(tts_request.dialogue, max_chars=tts_request.max_chars)
         audio_chunks: List[bytes] = []
 
         logger.info("Using local Dia for TTS generation")
