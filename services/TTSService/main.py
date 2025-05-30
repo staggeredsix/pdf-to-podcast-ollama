@@ -36,9 +36,6 @@ class DialogueEntry(BaseModel):
 
 DEFAULT_MAX_CHARS = int(os.getenv("TTS_MAX_CHARS", "4000"))
 
-# Regex used to split text on natural pause boundaries
-SPLIT_REGEX = re.compile(r"(?<=[.,!?…])\s+")
-
 
 class TTSRequest(BaseModel):
     dialogue: List[DialogueEntry]
@@ -165,6 +162,12 @@ class DiaTTS:
         if not self.is_initialized or self.model is None:
             raise RuntimeError("Dia TTS engine is not initialized")
 
+        # Ensure we always pass a string to the underlying TTS model
+        if isinstance(text, DialogueEntry):
+            text = text.text
+        elif not isinstance(text, str):
+            text = str(text)
+
         logger.info(f"Generating speech: {text[:50]}...")
         try:
             import torch
@@ -203,12 +206,6 @@ class DiaTTS:
             logger.error(f"Speech generation failed: {e}")
             logger.error(traceback.format_exc())
             raise RuntimeError(f"Failed to generate speech: {e}")
-
-def split_text_on_punctuation(text: str) -> List[str]:
-    """Break text using common pause punctuation for natural pacing."""
-    text = text.replace("...", "…")
-    parts = SPLIT_REGEX.split(text)
-    return [p.strip() for p in parts if p.strip()]
 
 
 def chunk_dialogue(dialogue: List[DialogueEntry], max_chars: int = DEFAULT_MAX_CHARS) -> List[List[DialogueEntry]]:
