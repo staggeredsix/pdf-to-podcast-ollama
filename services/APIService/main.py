@@ -314,6 +314,7 @@ def process_pdf_task(
                                         "dialogue": agent_result["dialogue"],
                                         "job_id": job_id,
                                         "voice_mapping": transcription_params.voice_mapping,  # Forward the voice mapping
+                                        "max_chars": transcription_params.tts_chunk_chars,
                                     },
                                 )
                                 current_service = ServiceType.TTS
